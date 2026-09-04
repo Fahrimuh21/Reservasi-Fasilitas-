@@ -21,3 +21,8 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+# Database & Environment Lokal Tambahan
+/database/*.sqlite
+/database/*.sqlite-journal
+.DS_Store
+Thumbs.db

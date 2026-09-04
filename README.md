@@ -649,7 +649,7 @@ Tambahkan identitas anggota tim pada bagian berikut:
 | 1 | Nama Anggota 1 | NIM | Authentication & User |
 | 2 | Nama Anggota 2 | NIM | Facility |
 | 3 | Nama Anggota 3 | NIM | User Reservation |
-| 4 | Nama Anggota 4 | NIM | Officer Reservation |
+| 4 | Nawaal Hanif Mumtaz Arriye | 24060124120041 | Officer Reservation |
 | 5 | Nama Anggota 5 | NIM | Report & Recap |
 
 ---
