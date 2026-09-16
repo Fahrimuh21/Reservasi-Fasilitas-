@@ -3,9 +3,20 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
+/**
+ * DatabaseSeeder – Seeder akun demo untuk kebutuhan pengujian & submission (PRD Fase 6).
+ *
+ * Mengisi 1 akun per role sesuai kewajiban PRD:
+ *   - admin  : langsung active, dibuat langsung oleh sistem
+ *   - officer: langsung active, registration_source = admin_created (tidak pernah self-register)
+ *   - user   : langsung active (untuk demo); di production, user nyata akan melalui pending
+ *
+ * Jalankan: php artisan db:seed
+ * Atau reset: php artisan migrate:fresh --seed
+ */
 class DatabaseSeeder extends Seeder
 {
     /**
@@ -13,11 +24,80 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // =====================================================================
+        // 1. Admin
+        // =====================================================================
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@reservasi.test'],
+            [
+                'name'                => 'Administrator Sistem',
+                'password'            => Hash::make('password'),
+                'role'                => 'admin',
+                'account_status'      => 'active',
+                'registration_source' => 'admin_created',
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // =====================================================================
+        // 2. Officer (Petugas)
+        // Tidak pernah registrasi mandiri – selalu dibuat admin (US-13 SRS)
+        // =====================================================================
+        User::firstOrCreate(
+            ['email' => 'petugas@reservasi.test'],
+            [
+                'name'                => 'Petugas Fasilitas',
+                'password'            => Hash::make('password'),
+                'role'                => 'officer',
+                'account_status'      => 'active',
+                'registration_source' => 'admin_created',
+                'created_by'          => $admin->id,
+                'verified_by'         => $admin->id,
+                'verified_at'         => now(),
+            ]
+        );
+
+        // =====================================================================
+        // 3. Regular User (Pengguna / Mahasiswa)
+        // Status 'active' untuk demo; normalnya user self-register → pending → admin approve
+        // =====================================================================
+        User::firstOrCreate(
+            ['email' => 'user@reservasi.test'],
+            [
+                'name'                => 'Pengguna Mahasiswa',
+                'password'            => Hash::make('password'),
+                'role'                => 'user',
+                'account_status'      => 'active',
+                'user_type'           => 'mahasiswa',
+                'registration_source' => 'self_register',
+                'verified_by'         => $admin->id,
+                'verified_at'         => now(),
+            ]
+        );
+
+        // =====================================================================
+        // 4. Contoh akun 'pending' untuk demo verifikasi admin
+        // =====================================================================
+        User::firstOrCreate(
+            ['email' => 'pending@reservasi.test'],
+            [
+                'name'                => 'Calon Pengguna (Pending)',
+                'password'            => Hash::make('password'),
+                'role'                => 'user',
+                'account_status'      => 'pending',
+                'user_type'           => 'dosen',
+                'registration_source' => 'self_register',
+            ]
+        );
+
+        $this->command->info('✓ Seeder selesai. Akun demo:');
+        $this->command->table(
+            ['Role', 'Email', 'Password', 'Status'],
+            [
+                ['admin',   'admin@reservasi.test',   'password', 'active'],
+                ['officer', 'petugas@reservasi.test', 'password', 'active'],
+                ['user',    'user@reservasi.test',    'password', 'active'],
+                ['user',    'pending@reservasi.test', 'password', 'pending (demo verifikasi)'],
+            ]
+        );
     }
 }

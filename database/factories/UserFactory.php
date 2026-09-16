@@ -24,12 +24,54 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'name'                => fake()->name(),
+            'email'               => fake()->unique()->safeEmail(),
+            'email_verified_at'   => now(),
+            'password'            => static::$password ??= Hash::make('password'),
+            'role'                => 'user',
+            'account_status'      => 'active',
+            'user_type'           => fake()->randomElement(['mahasiswa', 'dosen', 'staf']),
+            'registration_source' => 'self_register',
+            'remember_token'      => Str::random(10),
         ];
+    }
+
+    /** State: akun pending (menunggu verifikasi) */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => 'pending',
+        ]);
+    }
+
+    /** State: akun suspended/nonaktif */
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => 'suspended',
+        ]);
+    }
+
+    /** State: petugas (dibuat admin) */
+    public function officer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role'                => 'officer',
+            'user_type'           => null,
+            'registration_source' => 'admin_created',
+            'account_status'      => 'active',
+        ]);
+    }
+
+    /** State: admin */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role'                => 'admin',
+            'user_type'           => null,
+            'registration_source' => 'admin_created',
+            'account_status'      => 'active',
+        ]);
     }
 
     /**
@@ -42,3 +84,4 @@ class UserFactory extends Factory
         ]);
     }
 }
+
