@@ -3,7 +3,10 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\FacilityController as AdminFacilityController;
+use App\Http\Controllers\Officer\FacilityController as OfficerFacilityController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,6 +43,29 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // =============================================================================
+// Modul Facility Management (Orang 2) – Endpoint Publik (tanpa auth)
+// =============================================================================
+
+// FR-1 & FR-2 – Daftar fasilitas aktif + search + filter + pagination
+// GET /api/facilities?search=Lab&type_id=1&location_id=2&capacity_min=30&page=1&per_page=10
+Route::get('/facilities', [FacilityController::class, 'index']);
+
+// FR-4 – Detail fasilitas lengkap + ketersediaan hari ini
+// GET /api/facilities/{facility}
+Route::get('/facilities/{facility}', [FacilityController::class, 'show']);
+
+// FR-3 – Ketersediaan fasilitas per slot 30 menit (07.00–20.00)
+// GET /api/facilities/{facility}/availability?date=2026-09-20
+Route::get('/facilities/{facility}/availability', [FacilityController::class, 'availability']);
+
+// Dropdown data untuk filter frontend
+// GET /api/facility-types
+Route::get('/facility-types', [FacilityController::class, 'types']);
+
+// GET /api/locations
+Route::get('/locations', [FacilityController::class, 'locations']);
+
+// =============================================================================
 // Endpoint yang butuh autentikasi (token Sanctum valid)
 // =============================================================================
 Route::middleware('auth:sanctum')->group(function () {
@@ -54,9 +80,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // =========================================================================
     // Endpoint Admin – dilindungi middleware role:admin
-    // Sesuai DESIGN.md Bagian 11 (Admin Routes) & PRD Bagian 8 (Desain API)
     // =========================================================================
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+
+        // --- Modul Auth & User Management (Orang 1) ---
 
         // FR-4 – Daftar semua akun (filter opsional: role, status)
         // GET /api/admin/users?role=user&status=active
@@ -82,6 +109,43 @@ Route::middleware('auth:sanctum')->group(function () {
         // FR-7 – Toggle status active ↔ suspended + revoke token jika dinonaktifkan
         // PATCH /api/admin/users/{user}/toggle-status
         Route::patch('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus']);
+
+        // --- Modul Facility Management (Orang 2) – Admin CRUD (US-16) ---
+
+        // List semua fasilitas (termasuk inactive & maintenance)
+        // GET /api/admin/facilities?search=&type_id=&location_id=&status=inactive&page=1&per_page=10
+        Route::get('/facilities', [AdminFacilityController::class, 'index']);
+
+        // Tambah fasilitas baru
+        // POST /api/admin/facilities
+        Route::post('/facilities', [AdminFacilityController::class, 'store']);
+
+        // Edit data master fasilitas (tanpa ubah status)
+        // PUT /api/admin/facilities/{facility}
+        Route::put('/facilities/{facility}', [AdminFacilityController::class, 'update']);
+
+        // Toggle status active ↔ inactive
+        // PATCH /api/admin/facilities/{facility}/toggle-status
+        Route::patch('/facilities/{facility}/toggle-status', [AdminFacilityController::class, 'toggleStatus']);
+
+    });
+
+    // =========================================================================
+    // Endpoint Petugas – dilindungi middleware role:officer (US-12)
+    // Modul Facility Management (Orang 2) – Status Maintenance
+    // =========================================================================
+    Route::middleware('role:officer')->prefix('officer')->group(function () {
+    
+        // List fasilitas (active & maintenance)
+        Route::get('/facilities', [OfficerFacilityController::class, 'index']);
+
+        // Tandai fasilitas sebagai 'dalam perbaikan' (maintenance)
+        // PATCH /api/officer/facilities/{facility}/set-maintenance
+        Route::patch('/facilities/{facility}/set-maintenance', [OfficerFacilityController::class, 'setMaintenance']);
+
+        // Kembalikan fasilitas ke 'active' setelah selesai perbaikan
+        // PATCH /api/officer/facilities/{facility}/complete-maintenance
+        Route::patch('/facilities/{facility}/complete-maintenance', [OfficerFacilityController::class, 'completeMaintenance']);
 
     });
 

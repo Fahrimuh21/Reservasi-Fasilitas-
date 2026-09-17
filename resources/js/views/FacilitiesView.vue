@@ -4,8 +4,9 @@
  * Screen ID: 9b4eaf60a859485ea4a2057a9eba4306
  * Katalog & Grid Ketersediaan Fasilitas 30 Menit
  */
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 
 const router = useRouter();
 
@@ -13,73 +14,61 @@ const searchQuery  = ref('');
 const selectedType = ref('all');
 const currentTime  = ref(new Date());
 
-// Simulate 30-minute availability slots
-const timeSlots = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-                   '11:00', '11:30', '13:00', '13:30', '14:00', '14:30',
-                   '15:00', '15:30', '16:00', '16:30'];
+const facilities = ref([]);
+const isLoading = ref(true);
 
-const facilities = ref([
-    {
-        id: 'F001', name: 'Ruang Rapat Merapi', type: 'meeting',
-        location: 'Gedung A, Lt. 2', capacity: 20, color: 'coral',
-        icon: '▦',
-        slots: { '08:00': 'available', '08:30': 'booked', '09:00': 'booked', '09:30': 'available',
-                 '10:00': 'available', '10:30': 'available', '11:00': 'booked', '11:30': 'available',
-                 '13:00': 'available', '13:30': 'booked', '14:00': 'booked', '14:30': 'available',
-                 '15:00': 'available', '15:30': 'available', '16:00': 'available', '16:30': 'available' },
-    },
-    {
-        id: 'F002', name: 'Lapangan Futsal A', type: 'sports',
-        location: 'Kompleks Olahraga', capacity: 10, color: 'blue',
-        icon: '✚',
-        slots: { '08:00': 'booked', '08:30': 'booked', '09:00': 'available', '09:30': 'available',
-                 '10:00': 'booked', '10:30': 'available', '11:00': 'available', '11:30': 'available',
-                 '13:00': 'booked', '13:30': 'booked', '14:00': 'available', '14:30': 'available',
-                 '15:00': 'booked', '15:30': 'available', '16:00': 'available', '16:30': 'booked' },
-    },
-    {
-        id: 'F003', name: 'Studio Kreatif', type: 'creative',
-        location: 'Gedung B, Lt. 1', capacity: 15, color: 'yellow',
-        icon: '✦',
-        slots: { '08:00': 'available', '08:30': 'available', '09:00': 'available', '09:30': 'booked',
-                 '10:00': 'booked', '10:30': 'booked', '11:00': 'available', '11:30': 'available',
-                 '13:00': 'available', '13:30': 'available', '14:00': 'booked', '14:30': 'booked',
-                 '15:00': 'available', '15:30': 'available', '16:00': 'booked', '16:30': 'available' },
-    },
-    {
-        id: 'F004', name: 'Ruang Seminar Bromo', type: 'meeting',
-        location: 'Gedung C, Lt. 3', capacity: 80, color: 'green',
-        icon: '▦',
-        slots: { '08:00': 'available', '08:30': 'available', '09:00': 'booked', '09:30': 'booked',
-                 '10:00': 'booked', '10:30': 'booked', '11:00': 'booked', '11:30': 'available',
-                 '13:00': 'available', '13:30': 'available', '14:00': 'available', '14:30': 'booked',
-                 '15:00': 'booked', '15:30': 'booked', '16:00': 'available', '16:30': 'available' },
-    },
-    {
-        id: 'F005', name: 'Lapangan Basket', type: 'sports',
-        location: 'Kompleks Olahraga', capacity: 12, color: 'coral',
-        icon: '✚',
-        slots: { '08:00': 'available', '08:30': 'available', '09:00': 'available', '09:30': 'available',
-                 '10:00': 'available', '10:30': 'booked', '11:00': 'booked', '11:30': 'booked',
-                 '13:00': 'booked', '13:30': 'available', '14:00': 'available', '14:30': 'available',
-                 '15:00': 'available', '15:30': 'booked', '16:00': 'booked', '16:30': 'available' },
-    },
-    {
-        id: 'F006', name: 'Lab Komputer Rinjani', type: 'lab',
-        location: 'Gedung D, Lt. 1', capacity: 40, color: 'blue',
-        icon: '⌘',
-        slots: { '08:00': 'booked', '08:30': 'booked', '09:00': 'booked', '09:30': 'available',
-                 '10:00': 'available', '10:30': 'available', '11:00': 'booked', '11:30': 'booked',
-                 '13:00': 'available', '13:30': 'booked', '14:00': 'booked', '14:30': 'available',
-                 '15:00': 'available', '15:30': 'available', '16:00': 'booked', '16:30': 'booked' },
-    },
-]);
+// 26 slots dari jam 07:00 sampai 19:30 sesuai backend API
+const timeSlots = ref([]);
+for (let h = 7; h < 20; h++) {
+    timeSlots.value.push(`${String(h).padStart(2, '0')}:00`);
+    timeSlots.value.push(`${String(h).padStart(2, '0')}:30`);
+}
+
+onMounted(async () => {
+    try {
+        const response = await axios.get('/api/facilities?per_page=100');
+        facilities.value = response.data.data.map(f => {
+            
+            const slotsObj = {};
+            if (f.availability_today) {
+                f.availability_today.forEach(s => {
+                    slotsObj[s.start] = s.status === 'tersedia' ? 'available' : 'booked';
+                });
+            }
+
+            // Map tipe dari backend ke filter UI
+            let uiType = 'creative';
+            const typeName = (typeof f.type === 'string' ? f.type : f.type.name).toLowerCase();
+            if (typeName.includes('lab')) uiType = 'lab';
+            if (typeName.includes('kelas') || typeName.includes('rapat')) uiType = 'meeting';
+            if (typeName.includes('aula')) uiType = 'creative';
+
+            // Extract string for location (Tampilkan nama gedung saja)
+            const locName = typeof f.location === 'string' ? f.location : (f.location.building || f.location.name);
+
+            return {
+                id: f.id,
+                name: f.name,
+                type: uiType,
+                location: locName,
+                capacity: f.capacity,
+                color: uiType === 'lab' ? 'blue' : (uiType === 'meeting' ? 'green' : 'coral'),
+                icon: '▦',
+                slots: slotsObj
+            };
+        });
+    } catch (e) {
+        console.error('Error fetching facilities:', e);
+    } finally {
+        isLoading.value = false;
+    }
+});
 
 const typeOptions = [
     { value: 'all', label: 'Semua Fasilitas' },
-    { value: 'meeting', label: 'Ruang Rapat' },
+    { value: 'meeting', label: 'Ruang Kelas / Rapat' },
     { value: 'sports', label: 'Olahraga' },
-    { value: 'creative', label: 'Studio Kreatif' },
+    { value: 'creative', label: 'Aula / Studio' },
     { value: 'lab', label: 'Laboratorium' },
 ];
 
@@ -93,10 +82,16 @@ const filteredFacilities = computed(() => {
 });
 
 function availableCount(facility) {
+    if (!facility.slots) return 0;
     return Object.values(facility.slots).filter(s => s === 'available').length;
 }
 
+import { isAuthenticated } from '../auth';
+
 function bookFacility(facilityId) {
+    if (!isAuthenticated()) {
+        alert('Silakan login terlebih dahulu untuk melakukan reservasi fasilitas.');
+    }
     router.push({ name: 'reservations' });
 }
 </script>
