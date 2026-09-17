@@ -10,10 +10,14 @@
  *     ia berada di luar <RouterView> di GlobalLayout.
  */
 import { ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
+import { clearAuthSession, getAuthUser } from '../auth';
 
 const route = useRoute();
+const router = useRouter();
 const collapsed = ref(false);
+const user = computed(() => getAuthUser());
 
 // Navigation items — mapped 1:1 to router named routes
 const navItems = [
@@ -21,36 +25,57 @@ const navItems = [
         name: 'facilities',
         label: 'Katalog Fasilitas',
         icon: '⌂',
+        roles: ['user', 'officer', 'admin'],
         screenId: '9b4eaf60a859485ea4a2057a9eba4306',
     },
     {
         name: 'reservations',
         label: 'Reservasi Saya',
         icon: '◷',
+        roles: ['user'],
         screenId: 'afa48fa655154f92b6194d75a21aa27b',
     },
     {
         name: 'officer',
         label: 'Dashboard Petugas',
         icon: '✓',
+        roles: ['officer'],
         screenId: '27f9c22580c44370a6c9f89785168a63',
     },
     {
         name: 'report',
         label: 'Laporan Kerusakan',
         icon: '⚠',
+        roles: ['user'],
         screenId: '55597836a1f445e4ab3cd358e0c6155b',
     },
     {
         name: 'admin',
         label: 'Dashboard Admin',
         icon: '▦',
+        roles: ['admin'],
         screenId: '9400ab25f7044638a44066516e2c8bfd',
     },
 ];
 
+const visibleNavItems = computed(() => {
+    const role = user.value?.role;
+    return navItems.filter((item) => item.roles.includes(role));
+});
+
 // Breadcrumb is read from route.meta — this is read-only, never mutated here
 const currentBreadcrumb = computed(() => route.meta?.breadcrumb ?? 'RuangKita');
+
+async function handleLogout() {
+    try {
+        await axios.post('/api/logout');
+    } catch (error) {
+        console.warn('Logout API failed, clearing local session anyway:', error);
+    } finally {
+        clearAuthSession();
+        router.push({ name: 'login' });
+    }
+}
 </script>
 
 <template>
@@ -79,7 +104,7 @@ const currentBreadcrumb = computed(() => route.meta?.breadcrumb ?? 'RuangKita');
         -->
         <nav class="side-nav" aria-label="Primary navigation">
             <RouterLink
-                v-for="item in navItems"
+                v-for="item in visibleNavItems"
                 :key="item.name"
                 :to="{ name: item.name }"
                 class="nav-item"
@@ -105,15 +130,16 @@ const currentBreadcrumb = computed(() => route.meta?.breadcrumb ?? 'RuangKita');
 
         <!-- Bottom area — user info & settings -->
         <div class="sidebar-bottom">
-            <RouterLink :to="{ name: 'admin' }" class="quiet-button" id="nav-settings">
-                <span aria-hidden="true">⚙</span>
-                <span class="nav-label">Settings</span>
-            </RouterLink>
+            <button class="logout-button" @click="handleLogout">
+                <span aria-hidden="true">⎋</span>
+                <span class="nav-label">Logout</span>
+            </button>
+
             <div class="user-card">
-                <div class="avatar" aria-label="User avatar">FA</div>
+                <div class="avatar" aria-label="User avatar">{{ (user?.name || 'U').charAt(0).toUpperCase() }}</div>
                 <div class="nav-label">
-                    <strong>Fahri Ahmad</strong>
-                    <small>Administrator</small>
+                    <strong>{{ user?.name || 'User' }}</strong>
+                    <small>{{ user?.role || 'member' }}</small>
                 </div>
                 <span class="dots" aria-hidden="true">•••</span>
             </div>

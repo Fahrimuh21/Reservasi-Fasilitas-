@@ -15,28 +15,33 @@
  * state konten (data, form, fetch) tidak akan pernah menyentuh struktur DOM
  * navigasi utama.
  */
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 import AppSidebar from '../components/AppSidebar.vue';
+
+const route = useRoute();
+const isAuthPage = computed(() => ['login', 'register'].includes(route.name));
 </script>
 
 <template>
     <div class="app-shell">
-        <!--
-            AppSidebar berada DI LUAR slot RouterView.
-            Vue Router hanya mengganti konten <RouterView> — bukan seluruh tree ini.
-            Oleh karena itu sidebar tidak pernah di-remount, tidak ada flicker,
-            dan state sidebar (collapsed, hover, dsb) tetap utuh.
-        -->
-        <AppSidebar>
-            <!--
-                Slot ini diteruskan ke AppSidebar yang menampilkan topbar + konten.
-                RouterView berada di dalam slot AppSidebar agar layout tetap terstruktur.
-            -->
-            <main class="main-content" id="main-content" role="main">
-                <!--
-                    <RouterView> dengan transition bawaan Vue.
-                    `v-slot` digunakan agar kita bisa mengontrol transition
-                    per-komponen tanpa menyentuh struktur luar.
-                -->
+        <template v-if="!isAuthPage">
+            <AppSidebar>
+                <main class="main-content" id="main-content" role="main">
+                    <RouterView v-slot="{ Component, route }">
+                        <Transition name="fade-slide" mode="out-in">
+                            <component
+                                :is="Component"
+                                :key="route.name"
+                            />
+                        </Transition>
+                    </RouterView>
+                </main>
+            </AppSidebar>
+        </template>
+
+        <template v-else>
+            <main class="auth-page" id="auth-page" role="main">
                 <RouterView v-slot="{ Component, route }">
                     <Transition name="fade-slide" mode="out-in">
                         <component
@@ -46,7 +51,7 @@ import AppSidebar from '../components/AppSidebar.vue';
                     </Transition>
                 </RouterView>
             </main>
-        </AppSidebar>
+        </template>
     </div>
 </template>
 
