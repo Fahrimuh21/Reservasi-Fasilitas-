@@ -10,8 +10,11 @@
  */
 
 import { createRouter, createWebHistory } from 'vue-router';
+import { getAuthUser, isAuthenticated } from '../auth';
 
 // Lazy-load each view → code-split per route, sidebar is NEVER re-mounted
+const LoginView        = () => import('../views/LoginView.vue');
+const RegisterView     = () => import('../views/RegisterView.vue');
 const FacilitiesView   = () => import('../views/FacilitiesView.vue');
 const ReservationsView = () => import('../views/ReservationsView.vue');
 const OfficerView      = () => import('../views/OfficerView.vue');
@@ -19,10 +22,24 @@ const ReportView       = () => import('../views/ReportView.vue');
 const AdminView        = () => import('../views/AdminView.vue');
 
 const routes = [
+    {
+        path: '/login',
+        name: 'login',
+        component: LoginView,
+        meta: { title: 'Login' },
+    },
+    {
+        path: '/register',
+        name: 'register',
+        component: RegisterView,
+        meta: { title: 'Register' },
+    },
     // Default redirect to the facilities catalogue
     {
         path: '/',
-        redirect: '/facilities',
+        redirect: () => {
+            return isAuthenticated() ? '/facilities' : '/login';
+        },
     },
 
     // Screen 1 — Katalog & Grid Ketersediaan Fasilitas 30 Menit
@@ -34,6 +51,7 @@ const routes = [
             screenId: '9b4eaf60a859485ea4a2057a9eba4306',
             title: 'Katalog Fasilitas',
             breadcrumb: 'Facilities',
+            roles: ['user', 'officer', 'admin'],
         },
     },
 
@@ -46,6 +64,7 @@ const routes = [
             screenId: 'afa48fa655154f92b6194d75a21aa27b',
             title: 'Reservasi Saya',
             breadcrumb: 'My Reservations',
+            roles: ['user'],
         },
     },
 
@@ -58,6 +77,7 @@ const routes = [
             screenId: '27f9c22580c44370a6c9f89785168a63',
             title: 'Dashboard Petugas',
             breadcrumb: 'Officer Dashboard',
+            roles: ['officer'],
         },
     },
 
@@ -70,6 +90,7 @@ const routes = [
             screenId: '55597836a1f445e4ab3cd358e0c6155b',
             title: 'Laporan Kerusakan',
             breadcrumb: 'Damage Report',
+            roles: ['user'],
         },
     },
 
@@ -82,13 +103,16 @@ const routes = [
             screenId: '9400ab25f7044638a44066516e2c8bfd',
             title: 'Dashboard Admin',
             breadcrumb: 'Admin Dashboard',
+            roles: ['admin'],
         },
     },
 
     // 404 fallback — redirect unmatched paths to facilities
     {
         path: '/:pathMatch(.*)*',
-        redirect: '/facilities',
+        redirect: () => {
+            return isAuthenticated() ? '/facilities' : '/login';
+        },
     },
 ];
 
@@ -101,6 +125,29 @@ const router = createRouter({
         if (savedPosition) return savedPosition;
         return { top: 0, behavior: 'smooth' };
     },
+});
+
+router.beforeEach((to, from, next) => {
+    const publicPages = ['login', 'register'];
+
+    if (publicPages.includes(to.name) && isAuthenticated()) {
+        next({ name: 'facilities' });
+        return;
+    }
+
+    if (!publicPages.includes(to.name) && !isAuthenticated()) {
+        next({ name: 'login' });
+        return;
+    }
+
+    const allowedRoles = to.meta?.roles;
+    const userRole = getAuthUser()?.role;
+    if (allowedRoles && !allowedRoles.includes(userRole)) {
+        next({ name: 'facilities' });
+        return;
+    }
+
+    next();
 });
 
 /**
