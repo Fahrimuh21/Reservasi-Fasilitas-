@@ -136,17 +136,17 @@ class DatabaseSeeder extends Seeder
 
         $locA2 = Location::firstOrCreate(
             ['name' => 'Ruang Kelas Lt. 2'],
-            ['building' => 'Gedung A', 'floor' => '2']
+            ['building' => 'Gedung B', 'floor' => '2']
         );
 
         $locB1 = Location::firstOrCreate(
             ['name' => 'Lab Jaringan Lt. 1'],
-            ['building' => 'Gedung B', 'floor' => '1']
+            ['building' => 'Gedung C', 'floor' => '1']
         );
 
         $locC1 = Location::firstOrCreate(
             ['name' => 'Aula Utama Lt. 1'],
-            ['building' => 'Gedung C', 'floor' => '1']
+            ['building' => 'Gedung D', 'floor' => '1']
         );
 
         // =====================================================================
@@ -169,21 +169,22 @@ class DatabaseSeeder extends Seeder
             [
                 'name'             => 'Lab Komputer 2',
                 'facility_type_id' => $typeLab->id,
-                'location_id'      => $locA1->id,
+                'location_id'      => $locA2->id,
                 'capacity'         => 30,
-                'description'      => 'Lab komputer dengan 30 unit PC untuk kelas kecil.',
+                'description'      => 'Lab komputer dengan 30 unit PC iMac.',
                 'status'           => 'active',
             ]
         );
 
+        // Maintenance status
         Facility::firstOrCreate(
             ['code' => 'LAB-JAR-01'],
             [
                 'name'             => 'Lab Jaringan',
                 'facility_type_id' => $typeLab->id,
-                'location_id'      => $locB1->id,
+                'location_id'      => $locC1->id,
                 'capacity'         => 25,
-                'description'      => 'Lab jaringan komputer dengan peralatan Cisco dan Mikrotik.',
+                'description'      => 'Lab jaringan komputer dan server (sedang perbaikan AC).',
                 'status'           => 'maintenance',
             ]
         );
@@ -193,9 +194,9 @@ class DatabaseSeeder extends Seeder
             [
                 'name'             => 'Ruang Kelas 201',
                 'facility_type_id' => $typeKelas->id,
-                'location_id'      => $locA2->id,
+                'location_id'      => $locB1->id,
                 'capacity'         => 50,
-                'description'      => 'Ruang kelas besar dengan kursi lipat, proyektor, dan sound system.',
+                'description'      => 'Ruang kelas teori kapasitas besar.',
                 'status'           => 'active',
             ]
         );
@@ -229,11 +230,11 @@ class DatabaseSeeder extends Seeder
             ['Kode', 'Nama', 'Tipe', 'Lokasi', 'Kapasitas', 'Status'],
             [
                 ['LAB-KOM-01', 'Lab Komputer 1',  'Laboratorium', 'Gedung A', '40',  'active'],
-                ['LAB-KOM-02', 'Lab Komputer 2',  'Laboratorium', 'Gedung A', '30',  'active'],
-                ['LAB-JAR-01', 'Lab Jaringan',     'Laboratorium', 'Gedung B', '25',  'maintenance'],
-                ['RK-201',     'Ruang Kelas 201',  'Ruang Kelas',  'Gedung A', '50',  'active'],
-                ['RK-202',     'Ruang Kelas 202',  'Ruang Kelas',  'Gedung A', '35',  'inactive'],
-                ['AULA-01',    'Aula Utama',        'Aula',         'Gedung C', '200', 'active'],
+                ['LAB-KOM-02', 'Lab Komputer 2',  'Laboratorium', 'Gedung B', '30',  'active'],
+                ['LAB-JAR-01', 'Lab Jaringan',     'Laboratorium', 'Gedung C', '25',  'maintenance'],
+                ['RK-201',     'Ruang Kelas 201',  'Ruang Kelas',  'Gedung D', '50',  'active'],
+                ['RK-202',     'Ruang Kelas 202',  'Ruang Kelas',  'Gedung B', '35',  'inactive'],
+                ['AULA-01',    'Aula Utama',        'Aula',         'Gedung D', '200', 'active'],
             ]
         );
     }

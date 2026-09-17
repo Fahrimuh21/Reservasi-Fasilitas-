@@ -4,7 +4,8 @@
  * Screen ID: 27f9c22580c44370a6c9f89785168a63
  * Dashboard Petugas & Antrean Approval
  */
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
 
 const filterStatus = ref('pending');
 
@@ -38,6 +39,53 @@ function approve(id) {
 function reject(id) {
     const item = queue.value.find(q => q.id === id);
     if (item) item.status = 'rejected';
+}
+
+// ==========================================
+// Integrasi Modul 2: Facility Management
+// ==========================================
+const officerFacilities = ref([]);
+const isLoadingAction = ref(false);
+
+async function fetchOfficerFacilities() {
+    try {
+        const response = await axios.get('/api/officer/facilities?per_page=100');
+        officerFacilities.value = response.data.data;
+    } catch (e) {
+        console.error("Gagal mengambil fasilitas", e);
+    }
+}
+
+onMounted(() => {
+    fetchOfficerFacilities();
+});
+
+async function setMaintenance(facility) {
+    if (!confirm(`Tandai ${facility.name} dalam perbaikan?`)) return;
+    isLoadingAction.value = true;
+    try {
+        await axios.patch(`/api/officer/facilities/${facility.id}/set-maintenance`);
+        alert('Berhasil diset ke maintenance.');
+        fetchOfficerFacilities();
+    } catch (e) {
+        alert(e.response?.data?.message || 'Gagal mengubah status');
+    } finally {
+        isLoadingAction.value = false;
+    }
+}
+
+async function completeMaintenance(facility) {
+    if (!confirm(`Tandai perbaikan ${facility.name} sudah selesai?`)) return;
+    isLoadingAction.value = true;
+    try {
+        await axios.patch(`/api/officer/facilities/${facility.id}/complete-maintenance`);
+        alert('Berhasil dikembalikan ke aktif.');
+        fetchOfficerFacilities();
+    } catch (e) {
+        alert(e.response?.data?.message || 'Gagal mengubah status');
+    } finally {
+        isLoadingAction.value = false;
+    }
 }
 </script>
 
@@ -130,6 +178,47 @@ function reject(id) {
                 Tidak ada permintaan dengan status ini.
             </div>
         </div>
+        <!-- Facility Management (Modul 2) -->
+        <div class="facility-panel" style="margin-top: 40px;">
+            <div class="intro-row" style="margin-bottom: 20px;">
+                <div>
+                    <h2>Kelola Status Fasilitas</h2>
+                    <p class="subheading">Ubah status fasilitas menjadi "Dalam Perbaikan" atau sebaliknya.</p>
+                </div>
+            </div>
+            
+            <div class="queue-list">
+                <article v-for="f in officerFacilities" :key="f.id" class="queue-card">
+                    <div :class="['facility-icon', f.status === 'maintenance' ? 'yellow' : 'blue']">▦</div>
+                    <div class="queue-info">
+                        <strong>{{ f.name }}</strong>
+                        <span>{{ typeof f.location === 'string' ? f.location : f.location.name }}</span>
+                    </div>
+                    <div class="queue-user">
+                        <div>
+                            <strong>Status Saat Ini:</strong>
+                            <small :class="f.status === 'maintenance' ? 'text-warning' : 'text-success'">
+                                {{ f.status === 'maintenance' ? 'Dalam Perbaikan' : 'Aktif' }}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button v-if="f.status === 'active'" 
+                                class="action-btn reject" 
+                                @click="setMaintenance(f)" 
+                                :disabled="isLoadingAction">
+                            🔧 Set Perbaikan
+                        </button>
+                        <button v-if="f.status === 'maintenance'" 
+                                class="action-btn approve" 
+                                @click="completeMaintenance(f)" 
+                                :disabled="isLoadingAction">
+                            ✓ Selesai Diperbaiki
+                        </button>
+                    </div>
+                </article>
+            </div>
+        </div>
 
     </section>
 </template>
@@ -200,4 +289,6 @@ function reject(id) {
 .queue-enter-active, .queue-leave-active { transition: all 0.25s ease; }
 .queue-enter-from { opacity: 0; transform: translateX(-10px); }
 .queue-leave-to   { opacity: 0; transform: translateX(10px); }
+.text-warning { color: #d97706; }
+.text-success { color: #16a34a; }
 </style>

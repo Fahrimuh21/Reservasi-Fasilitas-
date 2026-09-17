@@ -128,23 +128,28 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-    const publicPages = ['login', 'register'];
+    const publicPages = ['login', 'register', 'facilities'];
 
-    if (publicPages.includes(to.name) && isAuthenticated()) {
+    // If user is already logged in, redirect them away from login/register pages
+    if (['login', 'register'].includes(to.name) && isAuthenticated()) {
         next({ name: 'facilities' });
         return;
     }
 
+    // Require auth for non-public pages
     if (!publicPages.includes(to.name) && !isAuthenticated()) {
         next({ name: 'login' });
         return;
     }
 
-    const allowedRoles = to.meta?.roles;
-    const userRole = getAuthUser()?.role;
-    if (allowedRoles && !allowedRoles.includes(userRole)) {
-        next({ name: 'facilities' });
-        return;
+    // Role authorization check (only if user is authenticated)
+    if (isAuthenticated()) {
+        const allowedRoles = to.meta?.roles;
+        const userRole = getAuthUser()?.role;
+        if (allowedRoles && !allowedRoles.includes(userRole)) {
+            next({ name: 'facilities' });
+            return;
+        }
     }
 
     next();

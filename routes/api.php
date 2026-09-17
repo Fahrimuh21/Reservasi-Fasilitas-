@@ -135,6 +135,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Modul Facility Management (Orang 2) – Status Maintenance
     // =========================================================================
     Route::middleware('role:officer')->prefix('officer')->group(function () {
+    
+        // List fasilitas (active & maintenance)
+        Route::get('/facilities', [OfficerFacilityController::class, 'index']);
 
         // Tandai fasilitas sebagai 'dalam perbaikan' (maintenance)
         // PATCH /api/officer/facilities/{facility}/set-maintenance

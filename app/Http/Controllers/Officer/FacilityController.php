@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Officer;
 use App\Http\Controllers\Controller;
 use App\Models\Facility;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use App\Http\Resources\FacilityResource;
 
 /**
  * Officer\FacilityController – Kelola status maintenance fasilitas oleh Petugas (US-12).
@@ -19,6 +21,22 @@ use Illuminate\Http\JsonResponse;
  */
 class FacilityController extends Controller
 {
+    /**
+     * List semua fasilitas (hanya active dan maintenance, hide inactive)
+     * GET /api/officer/facilities
+     */
+    public function index(Request $request)
+    {
+        $query = Facility::with(['facilityType', 'location'])
+            ->whereIn('status', [Facility::STATUS_ACTIVE, Facility::STATUS_MAINTENANCE])
+            ->orderBy('name');
+
+        if ($request->filled('search')) {
+            $query->search($request->search);
+        }
+
+        return FacilityResource::collection($query->paginate(50));
+    }
     /**
      * Tandai fasilitas sebagai 'dalam perbaikan' (US-12).
      *

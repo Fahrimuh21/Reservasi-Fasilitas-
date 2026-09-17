@@ -62,8 +62,15 @@ class FacilityController extends Controller
         }
 
         $perPage = $request->integer('per_page', 10);
+        $paginator = $query->paginate($perPage);
 
-        return FacilityResource::collection($query->paginate($perPage));
+        // Append availability_today for frontend grid if requested
+        $today = Carbon::today()->toDateString();
+        foreach ($paginator->items() as $facility) {
+            $facility->availability_today = $this->generateAvailabilitySlots($facility, $today);
+        }
+
+        return FacilityResource::collection($paginator);
     }
 
     /**

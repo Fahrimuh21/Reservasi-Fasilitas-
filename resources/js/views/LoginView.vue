@@ -88,6 +88,9 @@ async function submitLogin() {
                     <span>Belum punya akun?</span>
                     <RouterLink :to="{ name: 'register' }">Daftar sekarang</RouterLink>
                 </div>
+                <div class="auth-footer" style="margin-top: 10px;">
+                    <RouterLink :to="{ name: 'facilities' }">Lihat Katalog Fasilitas (Tanpa Login)</RouterLink>
+                </div>
             </div>
         </div>
     </div>
