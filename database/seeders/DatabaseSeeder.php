@@ -3,16 +3,24 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Facility;
+use App\Models\FacilityType;
+use App\Models\Location;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * DatabaseSeeder – Seeder akun demo untuk kebutuhan pengujian & submission (PRD Fase 6).
+ * DatabaseSeeder – Seeder akun demo & data fasilitas untuk kebutuhan pengujian & submission.
  *
  * Mengisi 1 akun per role sesuai kewajiban PRD:
  *   - admin  : langsung active, dibuat langsung oleh sistem
  *   - officer: langsung active, registration_source = admin_created (tidak pernah self-register)
  *   - user   : langsung active (untuk demo); di production, user nyata akan melalui pending
+ *
+ * Mengisi data fasilitas demo:
+ *   - 3 tipe fasilitas (Laboratorium, Ruang Kelas, Aula)
+ *   - 4 lokasi (Gedung A Lt.1, Gedung A Lt.2, Gedung B Lt.1, Gedung C Lt.1)
+ *   - 6 fasilitas dengan berbagai status (active, inactive, maintenance)
  *
  * Jalankan: php artisan db:seed
  * Atau reset: php artisan migrate:fresh --seed
@@ -97,6 +105,135 @@ class DatabaseSeeder extends Seeder
                 ['officer', 'petugas@reservasi.test', 'password', 'active'],
                 ['user',    'user@reservasi.test',    'password', 'active'],
                 ['user',    'pending@reservasi.test', 'password', 'pending (demo verifikasi)'],
+            ]
+        );
+
+        // =====================================================================
+        // 5. Tipe Fasilitas (Modul Facility Management – Orang 2)
+        // =====================================================================
+        $typeLab = FacilityType::firstOrCreate(
+            ['name' => 'Laboratorium'],
+            ['description' => 'Ruang laboratorium untuk praktikum dan penelitian']
+        );
+
+        $typeKelas = FacilityType::firstOrCreate(
+            ['name' => 'Ruang Kelas'],
+            ['description' => 'Ruang kelas untuk perkuliahan dan seminar']
+        );
+
+        $typeAula = FacilityType::firstOrCreate(
+            ['name' => 'Aula'],
+            ['description' => 'Ruang aula untuk acara besar dan kegiatan kemahasiswaan']
+        );
+
+        // =====================================================================
+        // 6. Lokasi
+        // =====================================================================
+        $locA1 = Location::firstOrCreate(
+            ['name' => 'Lab Komputer Lt. 1'],
+            ['building' => 'Gedung A', 'floor' => '1']
+        );
+
+        $locA2 = Location::firstOrCreate(
+            ['name' => 'Ruang Kelas Lt. 2'],
+            ['building' => 'Gedung A', 'floor' => '2']
+        );
+
+        $locB1 = Location::firstOrCreate(
+            ['name' => 'Lab Jaringan Lt. 1'],
+            ['building' => 'Gedung B', 'floor' => '1']
+        );
+
+        $locC1 = Location::firstOrCreate(
+            ['name' => 'Aula Utama Lt. 1'],
+            ['building' => 'Gedung C', 'floor' => '1']
+        );
+
+        // =====================================================================
+        // 7. Fasilitas (berbagai status untuk demo)
+        // =====================================================================
+        Facility::firstOrCreate(
+            ['code' => 'LAB-KOM-01'],
+            [
+                'name'             => 'Lab Komputer 1',
+                'facility_type_id' => $typeLab->id,
+                'location_id'      => $locA1->id,
+                'capacity'         => 40,
+                'description'      => 'Lab komputer dengan 40 unit PC, proyektor, dan AC.',
+                'status'           => 'active',
+            ]
+        );
+
+        Facility::firstOrCreate(
+            ['code' => 'LAB-KOM-02'],
+            [
+                'name'             => 'Lab Komputer 2',
+                'facility_type_id' => $typeLab->id,
+                'location_id'      => $locA1->id,
+                'capacity'         => 30,
+                'description'      => 'Lab komputer dengan 30 unit PC untuk kelas kecil.',
+                'status'           => 'active',
+            ]
+        );
+
+        Facility::firstOrCreate(
+            ['code' => 'LAB-JAR-01'],
+            [
+                'name'             => 'Lab Jaringan',
+                'facility_type_id' => $typeLab->id,
+                'location_id'      => $locB1->id,
+                'capacity'         => 25,
+                'description'      => 'Lab jaringan komputer dengan peralatan Cisco dan Mikrotik.',
+                'status'           => 'maintenance',
+            ]
+        );
+
+        Facility::firstOrCreate(
+            ['code' => 'RK-201'],
+            [
+                'name'             => 'Ruang Kelas 201',
+                'facility_type_id' => $typeKelas->id,
+                'location_id'      => $locA2->id,
+                'capacity'         => 50,
+                'description'      => 'Ruang kelas besar dengan kursi lipat, proyektor, dan sound system.',
+                'status'           => 'active',
+            ]
+        );
+
+        Facility::firstOrCreate(
+            ['code' => 'RK-202'],
+            [
+                'name'             => 'Ruang Kelas 202',
+                'facility_type_id' => $typeKelas->id,
+                'location_id'      => $locA2->id,
+                'capacity'         => 35,
+                'description'      => 'Ruang kelas standar dengan whiteboard dan proyektor.',
+                'status'           => 'inactive',
+            ]
+        );
+
+        Facility::firstOrCreate(
+            ['code' => 'AULA-01'],
+            [
+                'name'             => 'Aula Utama',
+                'facility_type_id' => $typeAula->id,
+                'location_id'      => $locC1->id,
+                'capacity'         => 200,
+                'description'      => 'Aula utama kampus untuk wisuda, seminar nasional, dan acara besar.',
+                'status'           => 'active',
+            ]
+        );
+
+        $this->command->info('✓ Data fasilitas demo:');
+        $this->command->table(
+            ['Kode', 'Nama', 'Tipe', 'Lokasi', 'Kapasitas', 'Status'],
+            [
+                ['LAB-KOM-01', 'Lab Komputer 1',  'Laboratorium', 'Gedung A', '40',  'active'],
+                ['LAB-KOM-02', 'Lab Komputer 2',  'Laboratorium', 'Gedung A', '30',  'active'],
+                ['LAB-JAR-01', 'Lab Jaringan',     'Laboratorium', 'Gedung B', '25',  'maintenance'],
+                ['RK-201',     'Ruang Kelas 201',  'Ruang Kelas',  'Gedung A', '50',  'active'],
+                ['RK-202',     'Ruang Kelas 202',  'Ruang Kelas',  'Gedung A', '35',  'inactive'],
+                ['AULA-01',    'Aula Utama',        'Aula',         'Gedung C', '200', 'active'],
             ]
         );
     }
