@@ -7,6 +7,8 @@ use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\FacilityController as AdminFacilityController;
 use App\Http\Controllers\Officer\FacilityController as OfficerFacilityController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\Admin\RecapController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,6 +72,23 @@ Route::get('/locations', [FacilityController::class, 'locations']);
 // =============================================================================
 Route::middleware('auth:sanctum')->group(function () {
 
+    // =========================================================================
+    // Endpoint Pengguna Umum (User)
+    // =========================================================================
+    Route::middleware('role:user')->prefix('user')->group(function () {
+        
+        // --- Modul Reporting & Monitoring (Orang 5) – Pengguna ---
+
+        // Buat laporan kerusakan baru (termasuk upload foto)
+        // POST /api/user/reports
+        Route::post('/reports', [ReportController::class, 'store']);
+        
+        // Lihat riwayat laporan kerusakan milik sendiri
+        // GET /api/user/reports
+        Route::get('/reports', [ReportController::class, 'userIndex']);
+
+    });
+
     // FR-3 – Logout: revoke token aktif
     // POST /api/logout
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -128,6 +147,16 @@ Route::middleware('auth:sanctum')->group(function () {
         // PATCH /api/admin/facilities/{facility}/toggle-status
         Route::patch('/facilities/{facility}/toggle-status', [AdminFacilityController::class, 'toggleStatus']);
 
+        // --- Modul Reporting & Monitoring (Orang 5) – Rekap Admin ---
+        
+        // Dashboard rekap fasilitas & laporan
+        // GET /api/admin/recap
+        Route::get('/recap', [RecapController::class, 'index']);
+        
+        // Export laporan kerusakan ke CSV
+        // GET /api/admin/export/reports
+        Route::get('/export/reports', [RecapController::class, 'exportCsv']);
+
     });
 
     // =========================================================================
@@ -146,6 +175,16 @@ Route::middleware('auth:sanctum')->group(function () {
         // Kembalikan fasilitas ke 'active' setelah selesai perbaikan
         // PATCH /api/officer/facilities/{facility}/complete-maintenance
         Route::patch('/facilities/{facility}/complete-maintenance', [OfficerFacilityController::class, 'completeMaintenance']);
+
+        // --- Modul Reporting & Monitoring (Orang 5) – Petugas ---
+
+        // Lihat antrian laporan kerusakan
+        // GET /api/officer/reports
+        Route::get('/reports', [ReportController::class, 'officerIndex']);
+        
+        // Proses laporan (update status & catatan penyelesaian)
+        // PUT /api/officer/reports/{report}
+        Route::put('/reports/{report}', [ReportController::class, 'updateStatus']);
 
     });
 

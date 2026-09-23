@@ -1,194 +1,1364 @@
 <script setup>
-/**
- * ReservationsView — Screen 2
- * Screen ID: afa48fa655154f92b6194d75a21aa27b
- *
- * Konten dimigrasikan dari App.vue (lama) ke view terpisah.
- * State di sini bersifat LOKAL — tidak mempengaruhi navigasi global.
- */
-import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
 
-const router  = useRouter();
-const selectedDate = ref('12 Jun');
-const showModal    = ref(false);
-const search       = ref('');
+import {
+    ref,
+    computed
+} from "vue";
+
+import {
+    useRouter
+} from "vue-router";
+
+
+const router = useRouter();
+
+
+
+const search = ref("");
+
+const showModal = ref(false);
+
+const selectedDate = ref("12 Jun");
+
+
+
+
 
 const reservations = ref([
-    { name: 'Ruang Rapat Merapi',  type: 'Meeting room',    date: 'Today, 10:00 - 12:00',          color: 'coral',  status: 'Confirmed' },
-    { name: 'Lapangan Futsal A',   type: 'Sports facility', date: 'Thu, 13 Jun, 16:00 - 18:00',    color: 'blue',   status: 'Confirmed' },
-    { name: 'Studio Kreatif',      type: 'Creative space',  date: 'Sat, 15 Jun, 09:00 - 11:00',    color: 'yellow', status: 'Pending'   },
+
+{
+id:1,
+name:"Ruang Rapat Merapi",
+type:"Meeting Room",
+date:"12 Jun 2026",
+time:"10:00 - 12:00",
+status:"Confirmed",
+capacity:20,
+icon:"▦"
+},
+
+
+{
+id:2,
+name:"Lab Komputer Rinjani",
+type:"Laboratorium",
+date:"15 Jun 2026",
+time:"13:00 - 15:00",
+status:"Pending",
+capacity:35,
+icon:"💻"
+},
+
+
+{
+id:3,
+name:"Studio Kreatif",
+type:"Creative Space",
+date:"20 Jun 2026",
+time:"09:00 - 11:00",
+status:"Confirmed",
+capacity:15,
+icon:"✦"
+}
+
 ]);
 
-const filteredReservations = computed(() =>
-    reservations.value.filter(item =>
-        item.name.toLowerCase().includes(search.value.toLowerCase())
-    )
+
+
+
+
+const filteredReservations = computed(()=>{
+
+
+return reservations.value.filter(r=>
+
+
+r.name
+.toLowerCase()
+.includes(
+search.value.toLowerCase()
+)
+
+
 );
 
-function addReservation() {
-    reservations.value.unshift({
-        name:   'Ruang Diskusi Bromo',
-        type:   'Meeting room',
-        date:   `${selectedDate.value}, 14:00 - 16:00`,
-        color:  'green',
-        status: 'Confirmed',
-    });
-    showModal.value = false;
+
+});
+
+
+
+
+
+
+function cancelReservation(id){
+
+
+const confirmCancel =
+confirm(
+"Batalkan reservasi ini?"
+);
+
+
+if(confirmCancel){
+
+
+reservations.value =
+reservations.value.filter(
+r=>r.id!==id
+);
+
+
 }
 
-function goToFacilities() {
-    router.push({ name: 'facilities' });
+
 }
 
-const iconMap = {
-    'Sports facility': '✚',
-    'Creative space':  '✦',
-    'Meeting room':    '▦',
-};
+
+
+
+
+function createReservation(){
+
+
+reservations.value.unshift({
+
+id:Date.now(),
+
+name:"Ruang Diskusi Bromo",
+
+type:"Meeting Room",
+
+date:selectedDate.value,
+
+time:"14:00 - 16:00",
+
+status:"Confirmed",
+
+capacity:10,
+
+icon:"▦"
+
+
+});
+
+
+showModal.value=false;
+
+
+}
+
+
+
+
+
+
+
+function explore(){
+
+
+router.push({
+name:"facilities"
+});
+
+
+}
+
+
+
+
+
+const calendarDays =
+Array.from(
+{length:30},
+(_,i)=>i+1
+);
+
+
+
 </script>
 
+
+
+
+
+
+
 <template>
-    <section class="content-wrap" id="screen-reservations" data-screen-id="afa48fa655154f92b6194d75a21aa27b">
 
-        <!-- Intro row -->
-        <div class="intro-row">
-            <div>
-                <p class="eyebrow">THURSDAY, 12 JUNE 2025</p>
-                <h1>Good morning, Fahri<span class="sun">✦</span></h1>
-                <p class="subheading">Keep your day moving. Here's what is happening around your workspace.</p>
-            </div>
-            <button class="primary-button" id="btn-new-reservation" @click="showModal = true">
-                <span>＋</span> New reservation
-            </button>
-        </div>
 
-        <!-- Stats -->
-        <div class="stat-grid">
-            <article class="stat-card">
-                <div class="stat-icon coral-bg">◷</div>
-                <div>
-                    <span>Upcoming reservations</span>
-                    <strong>{{ reservations.length.toString().padStart(2, '0') }}</strong>
-                    <small>+1 from last week</small>
-                </div>
-            </article>
-            <article class="stat-card">
-                <div class="stat-icon blue-bg">⌂</div>
-                <div>
-                    <span>Available facilities</span>
-                    <strong>12</strong>
-                    <small>Across 4 locations</small>
-                </div>
-            </article>
-            <article class="stat-card">
-                <div class="stat-icon yellow-bg">✓</div>
-                <div>
-                    <span>Hours reserved</span>
-                    <strong>18.5</strong>
-                    <small>This month</small>
-                </div>
-            </article>
-        </div>
+<section
+class="content-wrap"
+id="screen-reservations"
+>
 
-        <!-- Reservation list -->
-        <div class="section-heading">
-            <div>
-                <h2>Upcoming reservations</h2>
-                <p>Your confirmed and pending bookings.</p>
-            </div>
-            <label class="search" for="search-reservations">
-                <span>⌕</span>
-                <input id="search-reservations" v-model="search" placeholder="Search reservations">
-            </label>
-        </div>
 
-        <div class="reservation-list">
-            <article
-                v-for="reservation in filteredReservations"
-                :key="reservation.name"
-                class="reservation-row"
-            >
-                <div :class="['facility-icon', reservation.color]">
-                    {{ iconMap[reservation.type] ?? '▦' }}
-                </div>
-                <div class="reservation-info">
-                    <strong>{{ reservation.name }}</strong>
-                    <span>{{ reservation.type }}</span>
-                </div>
-                <div class="reservation-date">
-                    <span>DATE &amp; TIME</span>
-                    <strong>{{ reservation.date }}</strong>
-                </div>
-                <span :class="['status', reservation.status.toLowerCase()]">{{ reservation.status }}</span>
-                <button class="more-button" title="More actions" :aria-label="`More actions for ${reservation.name}`">•••</button>
-            </article>
-            <div v-if="filteredReservations.length === 0" class="empty-state">
-                No reservations found.
-            </div>
-        </div>
 
-        <!-- Lower grid: calendar + tip -->
-        <div class="lower-grid">
-            <section class="calendar-panel">
-                <div class="panel-heading">
-                    <div>
-                        <h2>June 2025</h2>
-                        <p>Choose a date to see facility availability.</p>
-                    </div>
-                    <div>
-                        <button class="calendar-arrow" aria-label="Previous month">‹</button>
-                        <button class="calendar-arrow" aria-label="Next month">›</button>
-                    </div>
-                </div>
-                <div class="weekdays">
-                    <span v-for="day in ['MON','TUE','WED','THU','FRI','SAT','SUN']" :key="day">{{ day }}</span>
-                </div>
-                <div class="dates">
-                    <button
-                        v-for="day in 30"
-                        :key="day"
-                        :class="{ selected: day === 12, muted: day < 5 }"
-                        :aria-label="`${day} June`"
-                        :aria-pressed="day === 12"
-                        @click="selectedDate = `${day} Jun`"
-                    >{{ day }}</button>
-                </div>
-            </section>
+<div class="intro-row">
 
-            <section class="tip-panel">
-                <div class="tip-art" aria-hidden="true">✦</div>
-                <div>
-                    <p class="eyebrow">QUICK TIP</p>
-                    <h2>Plan ahead, stay productive.</h2>
-                    <p>Reserve your favorite space early to make sure it is ready when you need it.</p>
-                    <button class="text-button" id="btn-explore-facilities" @click="goToFacilities">
-                        Explore facilities <span>→</span>
-                    </button>
-                </div>
-            </section>
-        </div>
 
-        <!-- New Reservation Modal -->
-        <Teleport to="body">
-            <div
-                v-if="showModal"
-                class="modal-backdrop"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="modal-title"
-                @click.self="showModal = false"
-            >
-                <div class="modal">
-                    <button class="modal-close" aria-label="Close modal" @click="showModal = false">×</button>
-                    <p class="eyebrow">NEW BOOKING</p>
-                    <h2 id="modal-title">Reserve a space</h2>
-                    <p>Selecting a space for <strong>{{ selectedDate }}</strong>.</p>
-                    <button class="primary-button full" id="btn-confirm-reservation" @click="addReservation">
-                        Confirm reservation <span>→</span>
-                    </button>
-                </div>
-            </div>
-        </Teleport>
-    </section>
+<div>
+
+<p class="eyebrow">
+MY RESERVATIONS
+</p>
+
+
+<h1>
+Your Workspace
+<span class="sun">
+✦
+</span>
+</h1>
+
+
+<p class="subheading">
+
+Kelola jadwal ruangan dan reservasi fasilitas Anda.
+
+</p>
+
+
+</div>
+
+
+
+
+<button
+
+class="primary-button"
+
+@click="
+showModal=true
+"
+
+>
+
+
+＋ Booking Baru
+
+</button>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+<!-- SUMMARY -->
+
+
+<div class="stat-grid">
+
+
+<article class="stat-card">
+
+
+<div class="stat-icon blue-bg">
+◷
+</div>
+
+
+<div>
+
+<span>
+Upcoming
+</span>
+
+
+<strong>
+{{reservations.length}}
+</strong>
+
+
+<small>
+Booking aktif
+</small>
+
+
+</div>
+
+
+</article>
+
+
+
+
+
+<article class="stat-card">
+
+
+<div class="stat-icon green-bg">
+✓
+</div>
+
+
+<div>
+
+<span>
+Approved
+</span>
+
+
+<strong>
+{{
+
+reservations.filter(
+r=>r.status==="Confirmed"
+).length
+
+}}
+</strong>
+
+
+<small>
+Disetujui
+</small>
+
+
+</div>
+
+
+</article>
+
+
+
+
+
+<article class="stat-card">
+
+
+<div class="stat-icon yellow-bg">
+⌂
+</div>
+
+
+<div>
+
+<span>
+Hours Reserved
+</span>
+
+
+<strong>
+12.5
+</strong>
+
+
+<small>
+Bulan ini
+</small>
+
+
+</div>
+
+
+</article>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<div class="reservation-layout">
+
+
+
+
+
+<!-- LEFT -->
+
+<div>
+
+
+<div class="section-head">
+
+
+<div>
+
+<h2>
+Upcoming Booking
+</h2>
+
+
+<p>
+Reservasi fasilitas Anda
+</p>
+
+
+</div>
+
+
+
+
+<div class="search">
+
+
+<span>
+⌕
+</span>
+
+
+<input
+
+v-model="search"
+
+placeholder="
+Cari reservasi...
+"
+
+>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="booking-list">
+
+
+
+<article
+
+v-for="item in filteredReservations"
+
+:key="item.id"
+
+class="booking-card"
+
+>
+
+
+
+<div class="booking-icon">
+
+{{item.icon}}
+
+</div>
+
+
+
+<div class="booking-info">
+
+
+<h3>
+{{item.name}}
+</h3>
+
+
+<p>
+{{item.type}}
+</p>
+
+
+<div class="booking-meta">
+
+
+<span>
+📅 {{item.date}}
+</span>
+
+
+<span>
+⏱ {{item.time}}
+</span>
+
+
+<span>
+👥 {{item.capacity}}
+orang
+</span>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<div class="booking-actions">
+
+
+<span
+
+:class="[
+
+'status',
+
+item.status.toLowerCase()
+
+]"
+
+>
+
+
+{{item.status}}
+
+
+</span>
+
+
+
+<button
+
+@click="
+cancelReservation(item.id)
+"
+
+>
+
+Cancel
+
+</button>
+
+
+</div>
+
+
+
+
+
+
+</article>
+
+
+
+
+
+
+<div
+
+v-if="
+filteredReservations.length===0
+"
+
+class="empty"
+
+>
+
+<h3>
+Belum ada reservasi
+</h3>
+
+
+<p>
+Mulai booking fasilitas favoritmu.
+</p>
+
+
+
+<button
+
+@click="explore"
+
+>
+
+Explore Facility
+
+</button>
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+<!-- RIGHT CALENDAR -->
+
+<div class="calendar-card">
+
+
+<h2>
+June 2026
+</h2>
+
+
+<p>
+Pilih tanggal booking
+</p>
+
+
+
+
+<div class="calendar">
+
+
+<div
+
+v-for="d in calendarDays"
+
+:key="d"
+
+:class="[
+
+'day',
+
+{
+active:d===12
+}
+
+]"
+
+@click="
+selectedDate=`${d} Jun 2026`
+"
+
+
+>
+
+
+{{d}}
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="calendar-tip">
+
+
+<strong>
+Quick Tip
+</strong>
+
+
+<p>
+
+Booking lebih awal meningkatkan peluang mendapatkan ruangan.
+
+</p>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- MODAL -->
+
+
+<Teleport to="body">
+
+
+<div
+
+v-if="showModal"
+
+class="modal-bg"
+
+@click.self="
+showModal=false
+"
+
+>
+
+
+<div class="modal">
+
+
+<button
+
+class="close"
+
+@click="
+showModal=false
+"
+
+>
+
+×
+
+
+</button>
+
+
+
+<h2>
+New Reservation
+</h2>
+
+
+<p>
+Tanggal:
+<strong>
+{{selectedDate}}
+</strong>
+</p>
+
+
+
+<button
+
+class="primary-button full"
+
+@click="
+createReservation
+"
+
+>
+
+Confirm Booking →
+
+</button>
+
+
+
+</div>
+
+
+</div>
+
+
+</Teleport>
+
+
+
+
+
+</section>
+
+
 </template>
+
+
+
+
+
+
+
+
+<style scoped>
+
+
+
+.reservation-layout{
+
+
+display:grid;
+
+
+grid-template-columns:
+1.3fr
+0.7fr;
+
+
+gap:24px;
+
+
+margin-top:30px;
+
+
+}
+
+
+
+
+
+
+.section-head{
+
+
+display:flex;
+
+
+justify-content:space-between;
+
+
+align-items:center;
+
+
+margin-bottom:20px;
+
+
+}
+
+
+
+.section-head h2{
+
+
+margin:0;
+
+
+font-size:20px;
+
+
+}
+
+
+
+
+
+.booking-list{
+
+
+display:grid;
+
+
+gap:14px;
+
+
+}
+
+
+
+.booking-card{
+
+
+display:flex;
+
+
+align-items:center;
+
+
+gap:16px;
+
+
+background:white;
+
+
+padding:20px;
+
+
+border-radius:22px;
+
+
+border:1px solid var(--line);
+
+
+transition:.25s;
+
+
+}
+
+
+
+.booking-card:hover{
+
+
+transform:
+translateY(-4px);
+
+
+box-shadow:
+0 20px 40px
+rgba(15,23,42,.08);
+
+
+}
+
+
+
+
+
+.booking-icon{
+
+
+width:52px;
+
+
+height:52px;
+
+
+border-radius:18px;
+
+
+background:
+var(--primary-soft);
+
+
+display:grid;
+
+
+place-items:center;
+
+
+font-size:24px;
+
+
+}
+
+
+
+
+
+.booking-info{
+
+
+flex:1;
+
+
+}
+
+
+
+.booking-info h3{
+
+
+margin:0;
+
+
+font-size:15px;
+
+
+}
+
+
+
+.booking-info p{
+
+
+margin:4px 0;
+
+
+color:#64748b;
+
+
+font-size:12px;
+
+
+}
+
+
+
+
+.booking-meta{
+
+
+display:flex;
+
+
+gap:15px;
+
+
+font-size:11px;
+
+
+color:#64748b;
+
+
+}
+
+
+
+
+
+.booking-actions{
+
+
+display:flex;
+
+
+flex-direction:column;
+
+
+gap:10px;
+
+
+align-items:end;
+
+
+}
+
+
+
+.booking-actions button{
+
+
+background:#fee2e2;
+
+
+color:#dc2626;
+
+
+padding:7px 12px;
+
+
+border-radius:10px;
+
+
+font-size:11px;
+
+
+font-weight:700;
+
+
+}
+
+
+
+
+
+.status{
+
+
+padding:6px 12px;
+
+
+border-radius:999px;
+
+
+font-size:10px;
+
+
+font-weight:800;
+
+
+}
+
+
+
+.status.confirmed{
+
+
+background:#dcfce7;
+
+
+color:#15803d;
+
+
+}
+
+
+.status.pending{
+
+
+background:#fef3c7;
+
+
+color:#b45309;
+
+
+}
+
+
+
+
+
+
+
+
+.calendar-card{
+
+
+background:#0f172a;
+
+
+color:white;
+
+
+border-radius:26px;
+
+
+padding:26px;
+
+
+height:max-content;
+
+
+}
+
+
+
+.calendar-card p{
+
+
+color:#94a3b8;
+
+
+font-size:13px;
+
+
+}
+
+
+
+
+
+.calendar{
+
+
+display:grid;
+
+
+grid-template-columns:
+repeat(7,1fr);
+
+
+gap:8px;
+
+
+margin-top:25px;
+
+
+}
+
+
+
+.day{
+
+
+height:38px;
+
+
+display:grid;
+
+
+place-items:center;
+
+
+border-radius:10px;
+
+
+font-size:12px;
+
+
+cursor:pointer;
+
+
+background:
+rgba(255,255,255,.05);
+
+
+}
+
+
+
+.day:hover,
+.day.active{
+
+
+background:
+#2563eb;
+
+
+}
+
+
+
+
+
+.calendar-tip{
+
+
+margin-top:25px;
+
+
+background:
+rgba(255,255,255,.08);
+
+
+padding:15px;
+
+
+border-radius:15px;
+
+
+}
+
+
+
+
+
+.empty{
+
+
+padding:50px;
+
+
+text-align:center;
+
+
+}
+
+
+
+.empty button{
+
+
+margin-top:15px;
+
+
+padding:12px 20px;
+
+
+border-radius:12px;
+
+
+background:#2563eb;
+
+
+color:white;
+
+
+}
+
+
+
+
+
+
+.modal-bg{
+
+
+position:fixed;
+
+
+inset:0;
+
+
+background:
+rgba(15,23,42,.45);
+
+
+display:grid;
+
+
+place-items:center;
+
+
+z-index:200;
+
+
+}
+
+
+
+.modal{
+
+
+background:white;
+
+
+padding:35px;
+
+
+border-radius:25px;
+
+
+width:360px;
+
+
+position:relative;
+
+
+}
+
+
+
+.close{
+
+
+position:absolute;
+
+
+right:15px;
+
+
+top:15px;
+
+
+background:none;
+
+
+font-size:25px;
+
+
+}
+
+
+
+.full{
+
+
+width:100%;
+
+
+margin-top:20px;
+
+
+}
+
+
+
+
+@media(max-width:900px){
+
+
+.reservation-layout{
+
+
+grid-template-columns:1fr;
+
+
+}
+
+
+
+.booking-card{
+
+
+flex-direction:column;
+
+
+align-items:flex-start;
+
+
+}
+
+
+}
+
+
+</style>

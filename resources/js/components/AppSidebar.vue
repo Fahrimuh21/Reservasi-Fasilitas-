@@ -1,160 +1,474 @@
 <script setup>
-/**
- * AppSidebar — Persistent navigation shell.
- *
- * ISOLATION RULES (per arsitektur):
- *  1. Komponen ini menggunakan <RouterLink> — active state dikelola
- *     sepenuhnya oleh Vue Router, bukan reactive ref lokal.
- *  2. State di sini (collapsed, user info) TIDAK pernah bocor ke konten layar.
- *  3. Komponen ini di-mount SATU KALI dan tidak pernah re-render karena
- *     ia berada di luar <RouterView> di GlobalLayout.
- */
-import { ref, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
-import { clearAuthSession, getAuthUser } from '../auth';
 
-const route = useRoute();
+import {
+    computed,
+    ref
+} from "vue";
+
+import {
+    useRoute,
+    useRouter
+} from "vue-router";
+
+import axios from "axios";
+
+import {
+    clearAuthSession,
+    getAuthUser
+} from "../auth";
+
+
+
 const router = useRouter();
-const collapsed = ref(false);
-const user = computed(() => getAuthUser());
+const route = useRoute();
 
-// Navigation items — mapped 1:1 to router named routes
-const navItems = [
-    {
-        name: 'facilities',
-        label: 'Katalog Fasilitas',
-        icon: '⌂',
-        roles: ['user', 'officer', 'admin'],
-        screenId: '9b4eaf60a859485ea4a2057a9eba4306',
-    },
-    {
-        name: 'reservations',
-        label: 'Reservasi Saya',
-        icon: '◷',
-        roles: ['user'],
-        screenId: 'afa48fa655154f92b6194d75a21aa27b',
-    },
-    {
-        name: 'officer',
-        label: 'Dashboard Petugas',
-        icon: '✓',
-        roles: ['officer'],
-        screenId: '27f9c22580c44370a6c9f89785168a63',
-    },
-    {
-        name: 'report',
-        label: 'Laporan Kerusakan',
-        icon: '⚠',
-        roles: ['user'],
-        screenId: '55597836a1f445e4ab3cd358e0c6155b',
-    },
-    {
-        name: 'admin',
-        label: 'Dashboard Admin',
-        icon: '▦',
-        roles: ['admin'],
-        screenId: '9400ab25f7044638a44066516e2c8bfd',
-    },
+
+const collapsed = ref(false);
+
+
+const user = computed(()=>getAuthUser());
+
+
+
+const menus=[
+
+{
+    name:"facilities",
+    label:"Fasilitas",
+    description:"Katalog fasilitas kampus",
+    icon:"▦",
+    roles:[
+        "user",
+        "officer",
+        "admin"
+    ]
+},
+
+
+{
+    name:"reservations",
+    label:"Reservasi Saya",
+    description:"Riwayat peminjaman",
+    icon:"◷",
+    roles:[
+        "user",
+        "admin"
+    ]
+},
+
+
+{
+    name:"officer",
+    label:"Petugas",
+    description:"Approval reservasi",
+    icon:"✓",
+    roles:[
+        "officer",
+        "admin"
+    ]
+},
+
+
+{
+    name:"report",
+    label:"Laporan Kerusakan",
+    description:"Kerusakan fasilitas",
+    icon:"⚠",
+    roles:[
+        "user",
+        "admin"
+    ]
+},
+
+
+{
+    name:"admin",
+    label:"Admin Panel",
+    description:"Manajemen sistem",
+    icon:"◫",
+    roles:[
+        "admin"
+    ]
+}
+
 ];
 
-const visibleNavItems = computed(() => {
-    const role = user.value?.role;
-    return navItems.filter((item) => item.roles.includes(role));
+
+
+const visibleMenus = computed(()=>{
+
+
+const role = user.value?.role;
+
+
+return menus.filter(menu =>
+
+    menu.roles.includes(role)
+
+);
+
+
 });
 
-// Breadcrumb is read from route.meta — this is read-only, never mutated here
-const currentBreadcrumb = computed(() => route.meta?.breadcrumb ?? 'RuangKita');
 
-async function handleLogout() {
-    try {
-        await axios.post('/api/logout');
-    } catch (error) {
-        console.warn('Logout API failed, clearing local session anyway:', error);
-    } finally {
-        clearAuthSession();
-        router.push({ name: 'login' });
-    }
+
+
+const roleLabel=computed(()=>{
+
+
+return user.value?.role
+?
+user.value.role.toUpperCase()
+:
+"GUEST";
+
+
+});
+
+
+
+
+
+function isActive(name){
+
+
+return route.name===name;
+
+
 }
+
+
+
+
+
+
+async function logout(){
+
+
+try{
+
+await axios.post("/api/logout");
+
+}
+
+catch(error){
+
+console.warn(
+"Logout API failed",
+error
+);
+
+}
+
+finally{
+
+
+clearAuthSession();
+
+
+router.push({
+    name:"login"
+});
+
+
+}
+
+
+}
+
+
+
+
 </script>
 
+
+
+
+
 <template>
-    <!-- ===== SIDEBAR SHELL ===== -->
-    <!--
-        .sidebar lives OUTSIDE <RouterView> in GlobalLayout.
-        It is rendered once at app boot and persists across all route changes.
-        Vue Router updates only the <RouterLink> active classes via the router's
-        internal state — no DOM teardown happens here on navigation.
-    -->
-    <aside class="sidebar" :class="{ 'sidebar--collapsed': collapsed }">
 
-        <!-- Brand -->
-        <div class="brand">
-            <span class="brand-mark">R</span>
-            <span class="brand-name">RuangKita</span>
-        </div>
 
-        <!-- Section label -->
-        <div class="workspace-label" aria-hidden="true">WORKSPACE</div>
+<aside
 
-        <!-- Primary navigation
-             RouterLink automatically applies `.router-link-active` and
-             `.router-link-exact-active` — we alias the exact-active class
-             to our own `.nav-item--active` for styling control.
-        -->
-        <nav class="side-nav" aria-label="Primary navigation">
-            <RouterLink
-                v-for="item in visibleNavItems"
-                :key="item.name"
-                :to="{ name: item.name }"
-                class="nav-item"
-                active-class="nav-item--active"
-                :title="collapsed ? item.label : undefined"
-                :data-screen-id="item.screenId"
-                :id="`nav-${item.name}`"
-            >
-                <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
-                <span class="nav-label">{{ item.label }}</span>
-            </RouterLink>
-        </nav>
+class="sidebar"
 
-        <!-- Collapse toggle -->
-        <button
-            class="collapse-toggle"
-            :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'"
-            aria-label="Toggle sidebar"
-            @click="collapsed = !collapsed"
-        >
-            <span>{{ collapsed ? '›' : '‹' }}</span>
-        </button>
+:class="{
+'is-collapsed':collapsed
+}"
 
-        <!-- Bottom area — user info & settings -->
-        <div class="sidebar-bottom">
-            <button class="logout-button" @click="handleLogout">
-                <span aria-hidden="true">⎋</span>
-                <span class="nav-label">Logout</span>
-            </button>
+>
 
-            <div class="user-card">
-                <div class="avatar" aria-label="User avatar">{{ (user?.name || 'U').charAt(0).toUpperCase() }}</div>
-                <div class="nav-label">
-                    <strong>{{ user?.name || 'User' }}</strong>
-                    <small>{{ user?.role || 'member' }}</small>
-                </div>
-                <span class="dots" aria-hidden="true">•••</span>
-            </div>
-        </div>
-    </aside>
 
-    <!-- ===== TOPBAR (persistent, above RouterView) ===== -->
-    <div class="topbar-wrapper">
-        <header class="topbar">
-            <div class="breadcrumb" aria-label="Current location">
-                Workspace <span aria-hidden="true">/</span> {{ currentBreadcrumb }}
-            </div>
-            <button class="help-button" aria-label="Help" id="btn-help">?</button>
-        </header>
-        <!-- RouterView slot is injected by GlobalLayout -->
-        <slot />
-    </div>
+
+
+<!-- BRAND -->
+
+<div class="brand">
+
+
+<div class="brand-logo">
+
+R
+
+</div>
+
+
+
+
+<div
+v-if="!collapsed"
+class="brand-info"
+>
+
+
+<strong>
+
+RuangKita
+
+</strong>
+
+
+<span>
+
+Campus Facility
+
+</span>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div
+v-if="!collapsed"
+class="section-title"
+>
+
+WORKSPACE
+
+</div>
+
+
+
+
+
+
+
+
+<nav>
+
+
+
+<RouterLink
+
+
+v-for="item in visibleMenus"
+
+
+:key="item.name"
+
+
+:to="{
+name:item.name
+}"
+
+
+class="nav-link"
+
+
+:class="{
+active:isActive(item.name)
+}"
+
+
+>
+
+
+
+<div class="nav-icon">
+
+{{item.icon}}
+
+</div>
+
+
+
+
+
+<div
+v-if="!collapsed"
+class="nav-content"
+>
+
+
+<strong>
+
+{{item.label}}
+
+</strong>
+
+
+<small>
+
+{{item.description}}
+
+</small>
+
+
+</div>
+
+
+
+</RouterLink>
+
+
+
+</nav>
+
+
+
+
+
+
+
+
+
+<button
+
+class="collapse"
+
+@click="collapsed=!collapsed"
+
+>
+
+
+{{collapsed?'›':'‹'}}
+
+
+</button>
+
+
+
+
+
+
+
+
+
+
+<div class="sidebar-bottom">
+
+
+
+
+
+<button
+
+class="logout"
+
+@click="logout"
+
+>
+
+
+<span>
+
+↪
+
+</span>
+
+
+<span v-if="!collapsed">
+
+Logout
+
+</span>
+
+
+</button>
+
+
+
+
+
+
+
+
+
+<div class="user-box">
+
+
+<div class="avatar">
+
+
+{{
+
+(user?.name || "U")
+.charAt(0)
+.toUpperCase()
+
+}}
+
+
+
+</div>
+
+
+
+
+
+
+
+<div
+v-if="!collapsed"
+class="user-detail"
+>
+
+
+
+<strong>
+
+{{user?.name}}
+
+</strong>
+
+
+
+<span>
+
+{{roleLabel}}
+
+</span>
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+</aside>
+
+
+
 </template>

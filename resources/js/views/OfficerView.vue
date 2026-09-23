@@ -1,294 +1,1578 @@
 <script setup>
-/**
- * OfficerView — Screen 3
- * Screen ID: 27f9c22580c44370a6c9f89785168a63
- * Dashboard Petugas & Antrean Approval
- */
-import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
 
-const filterStatus = ref('pending');
+import {
+    ref,
+    computed,
+    onMounted
+} from "vue";
 
-const queue = ref([
-    { id: 'REQ-001', user: 'Budi Santoso',  avatar: 'BS', facility: 'Ruang Rapat Merapi',  date: 'Hari ini, 13:00 – 15:00', submitted: '08:42',  color: 'coral',  status: 'pending'  },
-    { id: 'REQ-002', user: 'Rina Wijaya',   avatar: 'RW', facility: 'Studio Kreatif',       date: 'Besok, 10:00 – 12:00',    submitted: '07:15',  color: 'yellow', status: 'pending'  },
-    { id: 'REQ-003', user: 'Andi Saputra',  avatar: 'AS', facility: 'Lapangan Futsal A',    date: 'Kamis, 16:00 – 18:00',    submitted: 'Kemarin', color: 'blue',   status: 'approved' },
-    { id: 'REQ-004', user: 'Siti Rahayu',   avatar: 'SR', facility: 'Lab Komputer Rinjani', date: 'Jumat, 09:00 – 11:00',    submitted: 'Kemarin', color: 'blue',   status: 'rejected' },
-    { id: 'REQ-005', user: 'Deni Kusuma',   avatar: 'DK', facility: 'Ruang Seminar Bromo',  date: 'Senin, 14:00 – 17:00',    submitted: '2 hr lalu', color: 'green', status: 'pending' },
+import axios from "axios";
+
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Reservation Approval Queue
+|--------------------------------------------------------------------------
+*/
+
+
+const activeTab = ref("pending");
+
+
+
+const reservations = ref([
+
+{
+id:"REQ-001",
+user:"Budi Santoso",
+facility:"Ruang Rapat Merapi",
+date:"Hari ini • 13:00",
+status:"pending",
+avatar:"BS"
+},
+
+
+{
+id:"REQ-002",
+user:"Rina Wijaya",
+facility:"Studio Kreatif",
+date:"Besok • 10:00",
+status:"pending",
+avatar:"RW"
+},
+
+
+{
+id:"REQ-003",
+user:"Andi Saputra",
+facility:"Lapangan Futsal",
+date:"Kemarin",
+status:"approved",
+avatar:"AS"
+},
+
+
+{
+id:"REQ-004",
+user:"Siti Rahayu",
+facility:"Lab Komputer",
+date:"Kemarin",
+status:"rejected",
+avatar:"SR"
+}
+
 ]);
 
-const statusTabs = [
-    { value: 'pending',  label: 'Menunggu' },
-    { value: 'approved', label: 'Disetujui' },
-    { value: 'rejected', label: 'Ditolak' },
+
+
+
+
+
+const tabs=[
+
+{
+value:"pending",
+label:"Menunggu"
+},
+
+{
+value:"approved",
+label:"Disetujui"
+},
+
+{
+value:"rejected",
+label:"Ditolak"
+}
+
 ];
 
-const filteredQueue = computed(() =>
-    queue.value.filter(q => q.status === filterStatus.value)
+
+
+
+
+
+const filteredReservations =
+computed(()=>{
+
+
+return reservations.value.filter(
+
+r=>r.status===activeTab.value
+
 );
 
-const pendingCount  = computed(() => queue.value.filter(q => q.status === 'pending').length);
-const approvedCount = computed(() => queue.value.filter(q => q.status === 'approved').length);
-const rejectedCount = computed(() => queue.value.filter(q => q.status === 'rejected').length);
 
-function approve(id) {
-    const item = queue.value.find(q => q.id === id);
-    if (item) item.status = 'approved';
-}
-
-function reject(id) {
-    const item = queue.value.find(q => q.id === id);
-    if (item) item.status = 'rejected';
-}
-
-// ==========================================
-// Integrasi Modul 2: Facility Management
-// ==========================================
-const officerFacilities = ref([]);
-const isLoadingAction = ref(false);
-
-async function fetchOfficerFacilities() {
-    try {
-        const response = await axios.get('/api/officer/facilities?per_page=100');
-        officerFacilities.value = response.data.data;
-    } catch (e) {
-        console.error("Gagal mengambil fasilitas", e);
-    }
-}
-
-onMounted(() => {
-    fetchOfficerFacilities();
 });
 
-async function setMaintenance(facility) {
-    if (!confirm(`Tandai ${facility.name} dalam perbaikan?`)) return;
-    isLoadingAction.value = true;
-    try {
-        await axios.patch(`/api/officer/facilities/${facility.id}/set-maintenance`);
-        alert('Berhasil diset ke maintenance.');
-        fetchOfficerFacilities();
-    } catch (e) {
-        alert(e.response?.data?.message || 'Gagal mengubah status');
-    } finally {
-        isLoadingAction.value = false;
-    }
+
+
+
+
+
+const countPending =
+computed(()=>
+
+
+reservations.value.filter(
+r=>r.status==="pending"
+).length
+
+
+);
+
+
+const countApproved =
+computed(()=>
+
+
+reservations.value.filter(
+r=>r.status==="approved"
+).length
+
+
+);
+
+
+const countRejected =
+computed(()=>
+
+
+reservations.value.filter(
+r=>r.status==="rejected"
+).length
+
+
+);
+
+
+
+
+
+
+
+function approve(id){
+
+
+const item =
+reservations.value.find(
+x=>x.id===id
+);
+
+
+if(item)
+item.status="approved";
+
+
 }
 
-async function completeMaintenance(facility) {
-    if (!confirm(`Tandai perbaikan ${facility.name} sudah selesai?`)) return;
-    isLoadingAction.value = true;
-    try {
-        await axios.patch(`/api/officer/facilities/${facility.id}/complete-maintenance`);
-        alert('Berhasil dikembalikan ke aktif.');
-        fetchOfficerFacilities();
-    } catch (e) {
-        alert(e.response?.data?.message || 'Gagal mengubah status');
-    } finally {
-        isLoadingAction.value = false;
-    }
+
+
+
+function reject(id){
+
+
+const item =
+reservations.value.find(
+x=>x.id===id
+);
+
+
+if(item)
+item.status="rejected";
+
+
 }
+
+
+
+
+
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Facility Maintenance
+|--------------------------------------------------------------------------
+*/
+
+
+const facilities = ref([]);
+
+const loading = ref(false);
+
+
+
+async function loadFacilities(){
+
+
+try{
+
+
+const res =
+await axios.get(
+"/api/officer/facilities?per_page=100"
+);
+
+
+
+facilities.value =
+res.data.data;
+
+
+}
+
+catch(err){
+
+console.error(err);
+
+}
+
+
+}
+
+
+
+
+
+onMounted(loadFacilities);
+
+
+
+
+
+
+async function maintenance(item){
+
+
+if(
+!confirm(
+`Set ${item.name} menjadi maintenance?`
+)
+)
+return;
+
+
+
+loading.value=true;
+
+
+
+try{
+
+
+await axios.patch(
+
+`/api/officer/facilities/${item.id}/set-maintenance`
+
+);
+
+
+
+await loadFacilities();
+
+
+}
+
+
+finally{
+
+
+loading.value=false;
+
+
+}
+
+
+}
+
+
+
+
+
+
+
+
+async function restore(item){
+
+
+if(
+!confirm(
+`Aktifkan kembali ${item.name}?`
+)
+)
+return;
+
+
+
+loading.value=true;
+
+
+
+try{
+
+
+await axios.patch(
+
+`/api/officer/facilities/${item.id}/complete-maintenance`
+
+);
+
+
+
+await loadFacilities();
+
+
+}
+
+
+finally{
+
+
+loading.value=false;
+
+
+}
+
+
+}
+
+
+
+
+
 </script>
 
+
+
+
+
+
+
+
 <template>
-    <section class="content-wrap" id="screen-officer" data-screen-id="27f9c22580c44370a6c9f89785168a63">
 
-        <div class="intro-row">
-            <div>
-                <p class="eyebrow">DASHBOARD PETUGAS</p>
-                <h1>Antrean Approval<span class="sun">✦</span></h1>
-                <p class="subheading">Tinjau dan kelola permintaan reservasi dari pengguna.</p>
-            </div>
-        </div>
 
-        <!-- Stats -->
-        <div class="stat-grid" style="margin: 32px 0 40px">
-            <article class="stat-card">
-                <div class="stat-icon yellow-bg">◷</div>
-                <div>
-                    <span>Menunggu Review</span>
-                    <strong>{{ pendingCount.toString().padStart(2,'0') }}</strong>
-                    <small>Perlu tindakan</small>
-                </div>
-            </article>
-            <article class="stat-card">
-                <div class="stat-icon blue-bg">✓</div>
-                <div>
-                    <span>Disetujui Hari Ini</span>
-                    <strong>{{ approvedCount.toString().padStart(2,'0') }}</strong>
-                    <small>Total approved</small>
-                </div>
-            </article>
-            <article class="stat-card">
-                <div class="stat-icon coral-bg">✕</div>
-                <div>
-                    <span>Ditolak</span>
-                    <strong>{{ rejectedCount.toString().padStart(2,'0') }}</strong>
-                    <small>Total ditolak</small>
-                </div>
-            </article>
-        </div>
+<section
 
-        <!-- Status tabs -->
-        <div class="officer-tabs" role="tablist" aria-label="Status filter">
-            <button
-                v-for="tab in statusTabs"
-                :key="tab.value"
-                role="tab"
-                :aria-selected="filterStatus === tab.value"
-                :class="['officer-tab', { active: filterStatus === tab.value }]"
-                @click="filterStatus = tab.value"
-            >{{ tab.label }}</button>
-        </div>
+class="content-wrap"
 
-        <!-- Queue list -->
-        <div class="queue-list">
-            <TransitionGroup name="queue" tag="div">
-                <article
-                    v-for="item in filteredQueue"
-                    :key="item.id"
-                    class="queue-card"
-                >
-                    <div :class="['facility-icon', item.color]">▦</div>
-                    <div class="queue-info">
-                        <strong>{{ item.facility }}</strong>
-                        <span>{{ item.date }}</span>
-                    </div>
-                    <div class="queue-user">
-                        <div class="avatar">{{ item.avatar }}</div>
-                        <div>
-                            <strong>{{ item.user }}</strong>
-                            <small>Dikirim: {{ item.submitted }}</small>
-                        </div>
-                    </div>
-                    <span :class="['status', item.status]">
-                        {{ item.status === 'pending' ? 'Pending' : item.status === 'approved' ? 'Approved' : 'Rejected' }}
-                    </span>
-                    <div v-if="item.status === 'pending'" class="action-buttons">
-                        <button class="action-btn approve" :id="`btn-approve-${item.id}`" @click="approve(item.id)">
-                            ✓ Setujui
-                        </button>
-                        <button class="action-btn reject" :id="`btn-reject-${item.id}`" @click="reject(item.id)">
-                            ✕ Tolak
-                        </button>
-                    </div>
-                    <div v-else class="action-placeholder"></div>
-                </article>
-            </TransitionGroup>
-            <div v-if="filteredQueue.length === 0" class="empty-state">
-                Tidak ada permintaan dengan status ini.
-            </div>
-        </div>
-        <!-- Facility Management (Modul 2) -->
-        <div class="facility-panel" style="margin-top: 40px;">
-            <div class="intro-row" style="margin-bottom: 20px;">
-                <div>
-                    <h2>Kelola Status Fasilitas</h2>
-                    <p class="subheading">Ubah status fasilitas menjadi "Dalam Perbaikan" atau sebaliknya.</p>
-                </div>
-            </div>
-            
-            <div class="queue-list">
-                <article v-for="f in officerFacilities" :key="f.id" class="queue-card">
-                    <div :class="['facility-icon', f.status === 'maintenance' ? 'yellow' : 'blue']">▦</div>
-                    <div class="queue-info">
-                        <strong>{{ f.name }}</strong>
-                        <span>{{ typeof f.location === 'string' ? f.location : f.location.name }}</span>
-                    </div>
-                    <div class="queue-user">
-                        <div>
-                            <strong>Status Saat Ini:</strong>
-                            <small :class="f.status === 'maintenance' ? 'text-warning' : 'text-success'">
-                                {{ f.status === 'maintenance' ? 'Dalam Perbaikan' : 'Aktif' }}
-                            </small>
-                        </div>
-                    </div>
-                    <div class="action-buttons">
-                        <button v-if="f.status === 'active'" 
-                                class="action-btn reject" 
-                                @click="setMaintenance(f)" 
-                                :disabled="isLoadingAction">
-                            🔧 Set Perbaikan
-                        </button>
-                        <button v-if="f.status === 'maintenance'" 
-                                class="action-btn approve" 
-                                @click="completeMaintenance(f)" 
-                                :disabled="isLoadingAction">
-                            ✓ Selesai Diperbaiki
-                        </button>
-                    </div>
-                </article>
-            </div>
-        </div>
+id="screen-officer"
 
-    </section>
+>
+
+
+
+<div class="intro-row">
+
+
+<div>
+
+
+<p class="eyebrow">
+
+OFFICER CONTROL CENTER
+
+</p>
+
+
+<h1>
+
+Operations Dashboard
+
+<span class="sun">
+
+✦
+
+</span>
+
+
+</h1>
+
+
+<p class="subheading">
+
+Kelola approval reservasi dan kondisi fasilitas kampus.
+
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- KPI -->
+
+
+<div class="stat-grid">
+
+
+
+<article class="stat-card">
+
+
+<div class="stat-icon yellow-bg">
+
+◷
+
+</div>
+
+
+<div>
+
+<span>
+
+Pending Approval
+
+</span>
+
+
+<strong>
+
+{{countPending}}
+
+</strong>
+
+
+<small>
+
+Menunggu tindakan
+
+</small>
+
+
+</div>
+
+
+</article>
+
+
+
+
+
+<article class="stat-card">
+
+
+<div class="stat-icon green-bg">
+
+✓
+
+</div>
+
+
+<div>
+
+<span>
+
+Approved
+
+</span>
+
+
+<strong>
+
+{{countApproved}}
+
+</strong>
+
+
+<small>
+
+Hari ini
+
+</small>
+
+
+</div>
+
+
+</article>
+
+
+
+
+
+<article class="stat-card">
+
+
+<div class="stat-icon coral-bg">
+
+⚠
+
+</div>
+
+
+<div>
+
+<span>
+
+Rejected
+
+</span>
+
+
+<strong>
+
+{{countRejected}}
+
+</strong>
+
+
+<small>
+
+Ditolak
+
+</small>
+
+
+</div>
+
+
+</article>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<div class="officer-grid">
+
+
+
+
+
+
+
+<!-- APPROVAL -->
+
+<div class="panel">
+
+
+<div class="panel-header">
+
+
+<div>
+
+<h2>
+
+Reservation Queue
+
+</h2>
+
+
+<p>
+
+Review permintaan pengguna
+
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+<div class="tabs">
+
+
+<button
+
+v-for="t in tabs"
+
+:key="t.value"
+
+:class="{
+
+active:
+activeTab===t.value
+
+}"
+
+@click="
+activeTab=t.value
+"
+
+
+>
+
+{{t.label}}
+
+</button>
+
+
+</div>
+
+
+
+
+
+
+
+<TransitionGroup
+
+name="list"
+
+class="queue"
+
+>
+
+
+
+<div
+
+v-for="item in filteredReservations"
+
+:key="item.id"
+
+class="request"
+
+>
+
+
+
+<div class="avatar">
+
+{{item.avatar}}
+
+</div>
+
+
+
+
+
+<div class="request-info">
+
+
+<strong>
+
+{{item.facility}}
+
+</strong>
+
+
+<p>
+
+{{item.user}}
+
+</p>
+
+
+<small>
+
+{{item.date}}
+
+</small>
+
+
+</div>
+
+
+
+
+
+
+
+<span
+
+:class="[
+
+'status',
+
+item.status
+
+]"
+
+>
+
+
+{{item.status}}
+
+</span>
+
+
+
+
+
+
+
+<div
+
+v-if="
+item.status==='pending'
+"
+
+class="actions"
+
+
+>
+
+
+<button
+
+class="approve"
+
+@click="
+approve(item.id)
+"
+
+>
+
+✓
+
+</button>
+
+
+<button
+
+class="reject"
+
+@click="
+reject(item.id)
+"
+
+>
+
+×
+
+
+</button>
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+</TransitionGroup>
+
+
+
+
+
+<div
+
+v-if="
+!filteredReservations.length
+"
+
+class="empty"
+
+>
+
+Tidak ada request.
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- FACILITY -->
+
+<div class="panel dark">
+
+
+
+<div class="panel-header">
+
+
+<div>
+
+<h2>
+
+Facility Health
+
+</h2>
+
+
+<p>
+
+Monitoring kondisi sarana
+
+</p>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="facility-list">
+
+
+
+<div
+
+v-for="f in facilities"
+
+:key="f.id"
+
+class="facility"
+
+>
+
+
+
+<div>
+
+
+<strong>
+
+{{f.name}}
+
+</strong>
+
+
+<p>
+
+{{
+
+typeof f.location==="string"
+
+?
+
+f.location
+
+:
+
+f.location?.name
+
+}}
+
+</p>
+
+
+</div>
+
+
+
+
+
+
+<span
+
+:class="[
+
+'facility-status',
+
+f.status
+
+]"
+
+>
+
+
+{{f.status}}
+
+</span>
+
+
+
+
+
+
+
+<button
+
+v-if="
+f.status==='active'
+"
+
+@click="
+maintenance(f)
+"
+
+>
+
+🔧
+
+</button>
+
+
+
+
+<button
+
+v-else
+
+@click="
+restore(f)
+"
+
+>
+
+✓
+
+</button>
+
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+</section>
+
+
 </template>
 
-<style scoped>
-.officer-tabs {
-    display: flex;
-    gap: 4px;
-    border-bottom: 2px solid var(--line);
-    margin-bottom: 20px;
-}
-.officer-tab {
-    padding: 10px 20px;
-    border-radius: 6px 6px 0 0;
-    background: transparent;
-    color: #8a9892;
-    font-size: 13px;
-    font-weight: 600;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: all 0.15s;
-}
-.officer-tab.active {
-    color: var(--primary);
-    border-bottom-color: var(--primary);
-    background: var(--primary-soft);
-}
-.queue-list { display: grid; gap: 10px; }
-.queue-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 18px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: #fff;
-    transition: box-shadow 0.15s;
-}
-.queue-card:hover { box-shadow: 0 4px 16px #b6c8bd22; }
-.queue-info { flex: 1; min-width: 0; }
-.queue-info strong { display: block; font-size: 13px; }
-.queue-info span   { display: block; margin-top: 3px; font-size: 11px; color: #9aa6a1; }
-.queue-user { display: flex; align-items: center; gap: 10px; width: 200px; }
-.queue-user strong { display: block; font-size: 12px; }
-.queue-user small  { display: block; font-size: 10px; color: #9aa6a1; margin-top: 2px; }
-.action-buttons { display: flex; gap: 7px; }
-.action-placeholder { width: 144px; }
-.action-btn {
-    padding: 7px 14px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    transition: all 0.15s;
-}
-.action-btn.approve {
-    background: #dbeafe;
-    color: #1d4ed8;
-}
-.action-btn.approve:hover { background: var(--primary); color: #fff; }
-.action-btn.reject {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-.action-btn.reject:hover { background: #b91c1c; color: #fff; }
 
-/* TransitionGroup for queue items */
-.queue-enter-active, .queue-leave-active { transition: all 0.25s ease; }
-.queue-enter-from { opacity: 0; transform: translateX(-10px); }
-.queue-leave-to   { opacity: 0; transform: translateX(10px); }
-.text-warning { color: #d97706; }
-.text-success { color: #16a34a; }
+
+
+
+
+
+
+
+
+<style scoped>
+
+
+
+.officer-grid{
+
+
+display:grid;
+
+
+grid-template-columns:
+1fr
+1fr;
+
+
+gap:24px;
+
+
+margin-top:30px;
+
+
+}
+
+
+
+
+
+
+
+.panel{
+
+
+background:white;
+
+
+border:1px solid var(--line);
+
+
+border-radius:25px;
+
+
+padding:25px;
+
+
+}
+
+
+
+.panel.dark{
+
+
+background:#0f172a;
+
+
+color:white;
+
+
+border:none;
+
+
+}
+
+
+
+.panel-header h2{
+
+
+margin:0;
+
+
+font-size:20px;
+
+
+}
+
+
+
+.panel-header p{
+
+
+margin-top:5px;
+
+
+font-size:12px;
+
+
+color:#94a3b8;
+
+
+}
+
+
+
+
+
+
+.tabs{
+
+
+display:flex;
+
+
+gap:8px;
+
+
+margin:20px 0;
+
+
+}
+
+
+
+.tabs button{
+
+
+padding:8px 15px;
+
+
+border-radius:999px;
+
+
+background:#f8fafc;
+
+
+font-size:12px;
+
+
+font-weight:700;
+
+
+}
+
+
+
+.tabs button.active{
+
+
+background:#2563eb;
+
+
+color:white;
+
+
+}
+
+
+
+
+
+
+
+
+.queue{
+
+
+display:grid;
+
+
+gap:12px;
+
+
+}
+
+
+
+.request{
+
+
+display:flex;
+
+
+align-items:center;
+
+
+gap:14px;
+
+
+padding:16px;
+
+
+border-radius:18px;
+
+
+background:#f8fafc;
+
+
+}
+
+
+
+.avatar{
+
+
+width:42px;
+
+
+height:42px;
+
+
+border-radius:14px;
+
+
+background:#2563eb;
+
+
+color:white;
+
+
+display:grid;
+
+
+place-items:center;
+
+
+font-weight:800;
+
+
+}
+
+
+
+.request-info{
+
+
+flex:1;
+
+
+}
+
+
+
+.request-info strong{
+
+
+font-size:13px;
+
+
+}
+
+
+
+.request-info p{
+
+
+margin:3px 0;
+
+
+font-size:12px;
+
+
+}
+
+
+
+.request-info small{
+
+
+color:#94a3b8;
+
+
+}
+
+
+
+
+
+.status{
+
+
+padding:6px 10px;
+
+
+font-size:10px;
+
+
+border-radius:999px;
+
+
+font-weight:800;
+
+
+}
+
+
+
+.status.pending{
+
+
+background:#fef3c7;
+
+
+color:#b45309;
+
+
+}
+
+
+
+.status.approved{
+
+
+background:#dcfce7;
+
+
+color:#15803d;
+
+
+}
+
+
+
+.status.rejected{
+
+
+background:#fee2e2;
+
+
+color:#dc2626;
+
+
+}
+
+
+
+
+
+
+
+.actions{
+
+
+display:flex;
+
+
+gap:5px;
+
+
+}
+
+
+
+.actions button{
+
+
+width:32px;
+
+
+height:32px;
+
+
+border-radius:10px;
+
+
+font-weight:bold;
+
+
+}
+
+
+
+.approve{
+
+
+background:#dcfce7;
+
+
+color:#15803d;
+
+
+}
+
+
+
+.reject{
+
+
+background:#fee2e2;
+
+
+color:#dc2626;
+
+
+}
+
+
+
+
+
+
+
+
+.facility-list{
+
+
+display:grid;
+
+
+gap:12px;
+
+
+margin-top:20px;
+
+
+}
+
+
+
+.facility{
+
+
+display:flex;
+
+
+align-items:center;
+
+
+gap:12px;
+
+
+padding:15px;
+
+
+background:
+rgba(255,255,255,.06);
+
+
+border-radius:16px;
+
+
+}
+
+
+
+.facility div{
+
+
+flex:1;
+
+
+}
+
+
+
+.facility p{
+
+
+margin:3px 0;
+
+
+font-size:12px;
+
+
+color:#94a3b8;
+
+
+}
+
+
+
+.facility button{
+
+
+background:white;
+
+
+border-radius:10px;
+
+
+width:35px;
+
+
+height:35px;
+
+
+}
+
+
+
+.facility-status{
+
+
+font-size:10px;
+
+
+padding:5px 10px;
+
+
+border-radius:999px;
+
+
+}
+
+
+
+.facility-status.active{
+
+
+background:#dcfce7;
+
+
+color:#15803d;
+
+
+}
+
+
+
+.facility-status.maintenance{
+
+
+background:#fef3c7;
+
+
+color:#b45309;
+
+
+}
+
+
+
+
+
+.empty{
+
+
+padding:40px;
+
+
+text-align:center;
+
+
+color:#94a3b8;
+
+
+}
+
+
+
+
+
+.list-enter-active,
+.list-leave-active{
+
+
+transition:.25s;
+
+
+}
+
+
+
+.list-enter-from{
+
+
+opacity:0;
+
+
+transform:translateX(-15px);
+
+
+}
+
+
+
+
+
+@media(max-width:900px){
+
+
+.officer-grid{
+
+
+grid-template-columns:1fr;
+
+
+}
+
+
+}
+
+
+
 </style>
