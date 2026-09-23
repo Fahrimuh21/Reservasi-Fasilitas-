@@ -61,7 +61,9 @@ async function submitLogin() {
 
             <div class="auth-card">
                 <div class="auth-header">
-                    <div class="brand-badge">R</div>
+                    <div class="brand-badge">
+                        <img :src="'/logo.png'" alt="RuangKita Logo" class="brand-logo-img" />
+                    </div>
                     <h1>Masuk ke RuangKita</h1>
                     <p>Kelola reservasi dan laporan fasilitas kampus.</p>
                 </div>
@@ -169,28 +171,71 @@ async function submitLogin() {
 
 .mini-card {
     position: absolute;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(148, 163, 184, 0.25);
-    border-radius: 16px;
-    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 18px;
+    padding: 12px 18px;
     font-weight: 700;
+    font-size: 0.92rem;
     color: #0f172a;
-    box-shadow: 0 18px 40px rgba(37, 99, 235, 0.08);
+    box-shadow:
+        0 8px 24px rgba(37, 99, 235, 0.14),
+        0 2px 8px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    cursor: default;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    will-change: transform;
+}
+
+.mini-card:hover {
+    box-shadow:
+        0 16px 40px rgba(37, 99, 235, 0.22),
+        0 4px 12px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
+    z-index: 2;
 }
 
 .mini-card.top {
     top: 28px;
     left: 26px;
+    animation: floatA 5.2s ease-in-out infinite;
 }
 
 .mini-card.mid {
     top: 110px;
     right: 26px;
+    animation: floatB 6.5s ease-in-out infinite;
 }
 
 .mini-card.bottom {
     bottom: 30px;
     left: 84px;
+    animation: floatC 4.8s ease-in-out infinite;
+}
+
+@keyframes floatA {
+    0%   { transform: translate(0px, 0px) rotate(0deg); }
+    25%  { transform: translate(5px, -10px) rotate(0.5deg); }
+    50%  { transform: translate(2px, -16px) rotate(-0.3deg); }
+    75%  { transform: translate(-4px, -8px) rotate(0.4deg); }
+    100% { transform: translate(0px, 0px) rotate(0deg); }
+}
+
+@keyframes floatB {
+    0%   { transform: translate(0px, 0px) rotate(0deg); }
+    20%  { transform: translate(-6px, -8px) rotate(-0.4deg); }
+    50%  { transform: translate(-3px, -14px) rotate(0.5deg); }
+    80%  { transform: translate(5px, -6px) rotate(-0.3deg); }
+    100% { transform: translate(0px, 0px) rotate(0deg); }
+}
+
+@keyframes floatC {
+    0%   { transform: translate(0px, 0px) rotate(0deg); }
+    30%  { transform: translate(4px, -12px) rotate(0.3deg); }
+    60%  { transform: translate(-5px, -8px) rotate(-0.5deg); }
+    85%  { transform: translate(2px, -14px) rotate(0.2deg); }
+    100% { transform: translate(0px, 0px) rotate(0deg); }
 }
 
 .auth-illustration h2 {
@@ -226,16 +271,22 @@ async function submitLogin() {
 }
 
 .brand-badge {
-    width: 54px;
-    height: 54px;
-    border-radius: 16px;
+    width: 120px;
+    height: 120px;
+    border-radius: 20px;
     display: grid;
     place-items: center;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: white;
-    font-weight: 800;
-    font-size: 24px;
+    background: #ffffff;
+    border: 1.5px solid rgba(37, 99, 235, 0.12);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.10);
+    padding: 8px;
     margin-bottom: 18px;
+}
+
+.brand-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .auth-header h1 {
@@ -340,3 +391,4 @@ async function submitLogin() {
     }
 }
 </style>
+
