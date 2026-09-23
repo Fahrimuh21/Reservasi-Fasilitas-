@@ -7,6 +7,7 @@ use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\FacilityController as AdminFacilityController;
 use App\Http\Controllers\Officer\FacilityController as OfficerFacilityController;
+use App\Http\Controllers\Officer\ReservationController as OfficerReservationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -112,6 +113,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // --- Modul Facility Management (Orang 2) – Admin CRUD (US-16) ---
 
+        // Ringkasan dashboard admin dari data aktual
+        Route::get('/facilities/summary', [AdminFacilityController::class, 'summary']);
+
         // List semua fasilitas (termasuk inactive & maintenance)
         // GET /api/admin/facilities?search=&type_id=&location_id=&status=inactive&page=1&per_page=10
         Route::get('/facilities', [AdminFacilityController::class, 'index']);
@@ -131,6 +135,26 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // =========================================================================
+    // Endpoint Pengguna – dilindungi middleware role:user
+    // Modul User Reservation (Orang 3)
+    // =========================================================================
+    Route::middleware('role:user')->group(function () {
+        
+        // List reservasi milik pengguna
+        Route::get('/reservations', [\App\Http\Controllers\ReservationController::class, 'index']);
+
+        // Buat reservasi baru
+        Route::post('/reservations', [\App\Http\Controllers\ReservationController::class, 'store']);
+
+        // Detail reservasi
+        Route::get('/reservations/{reservation}', [\App\Http\Controllers\ReservationController::class, 'show']);
+
+        // Batalkan reservasi
+        Route::post('/reservations/{reservation}/cancel', [\App\Http\Controllers\ReservationController::class, 'cancel']);
+
+    });
+
+    // =========================================================================
     // Endpoint Petugas – dilindungi middleware role:officer (US-12)
     // Modul Facility Management (Orang 2) – Status Maintenance
     // =========================================================================
@@ -138,6 +162,14 @@ Route::middleware('auth:sanctum')->group(function () {
     
         // List fasilitas (active & maintenance)
         Route::get('/facilities', [OfficerFacilityController::class, 'index']);
+
+        // Setujui fasilitas baru: pending -> active
+        Route::patch('/facilities/{facility}/approve', [OfficerFacilityController::class, 'approve']);
+
+        // Antrean reservasi user
+        Route::get('/reservations', [OfficerReservationController::class, 'index']);
+        Route::patch('/reservations/{reservation}/approve', [OfficerReservationController::class, 'approve']);
+        Route::patch('/reservations/{reservation}/reject', [OfficerReservationController::class, 'reject']);
 
         // Tandai fasilitas sebagai 'dalam perbaikan' (maintenance)
         // PATCH /api/officer/facilities/{facility}/set-maintenance

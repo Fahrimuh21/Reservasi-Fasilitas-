@@ -16,6 +16,7 @@ const currentTime  = ref(new Date());
 
 const facilities = ref([]);
 const isLoading = ref(true);
+const loadError = ref('');
 
 // 26 slots dari jam 07:00 sampai 19:30 sesuai backend API
 const timeSlots = ref([]);
@@ -24,10 +25,12 @@ for (let h = 7; h < 20; h++) {
     timeSlots.value.push(`${String(h).padStart(2, '0')}:30`);
 }
 
-onMounted(async () => {
+async function loadFacilities() {
+    isLoading.value = true;
+    loadError.value = '';
     try {
         const response = await axios.get('/api/facilities?per_page=100');
-        facilities.value = response.data.data.map(f => {
+        facilities.value = (response.data.data || []).map(f => {
             
             const slotsObj = {};
             if (f.availability_today) {
@@ -38,13 +41,15 @@ onMounted(async () => {
 
             // Map tipe dari backend ke filter UI
             let uiType = 'creative';
-            const typeName = (typeof f.type === 'string' ? f.type : f.type.name).toLowerCase();
+            const typeName = (typeof f.type === 'string' ? f.type : f.type?.name || '').toLowerCase();
             if (typeName.includes('lab')) uiType = 'lab';
             if (typeName.includes('kelas') || typeName.includes('rapat')) uiType = 'meeting';
             if (typeName.includes('aula')) uiType = 'creative';
 
             // Extract string for location (Tampilkan nama gedung saja)
-            const locName = typeof f.location === 'string' ? f.location : (f.location.building || f.location.name);
+            const locName = typeof f.location === 'string'
+                ? f.location
+                : (f.location?.building || f.location?.name || 'Lokasi belum ditentukan');
 
             return {
                 id: f.id,
@@ -59,10 +64,13 @@ onMounted(async () => {
         });
     } catch (e) {
         console.error('Error fetching facilities:', e);
+        loadError.value = e.response?.data?.message || 'Katalog fasilitas gagal dimuat.';
     } finally {
         isLoading.value = false;
     }
-});
+}
+
+onMounted(loadFacilities);
 
 const typeOptions = [
     { value: 'all', label: 'Semua Fasilitas' },
@@ -91,6 +99,8 @@ import { isAuthenticated } from '../auth';
 function bookFacility(facilityId) {
     if (!isAuthenticated()) {
         alert('Silakan login terlebih dahulu untuk melakukan reservasi fasilitas.');
+        router.push({ name: 'login' });
+        return;
     }
     router.push({ name: 'reservations' });
 }
@@ -131,7 +141,7 @@ function bookFacility(facilityId) {
                 <div>
                     <span>Total Fasilitas</span>
                     <strong>{{ facilities.length }}</strong>
-                    <small>Tersedia hari ini</small>
+                    <small>{{ isLoading ? 'Memuat data...' : 'Aktif dan disetujui petugas' }}</small>
                 </div>
             </article>
             <article class="stat-card">
@@ -139,7 +149,7 @@ function bookFacility(facilityId) {
                 <div>
                     <span>Slot Tersedia</span>
                     <strong>{{ facilities.reduce((a, f) => a + availableCount(f), 0) }}</strong>
-                    <small>Dari {{ facilities.length * timeSlots.length }} total slot</small>
+                    <small>Dari {{ facilities.length * timeSlots.length }} total slot aktif</small>
                 </div>
             </article>
             <article class="stat-card">
@@ -153,13 +163,33 @@ function bookFacility(facilityId) {
         </div>
 
         <!-- Time slot legend -->
-        <div class="legend-row">
+        <div v-if="facilities.length" class="legend-row">
             <div class="legend-item"><span class="legend-dot available"></span> Tersedia</div>
             <div class="legend-item"><span class="legend-dot booked"></span> Terpakai</div>
         </div>
 
         <!-- Availability grid -->
-        <div class="availability-grid">
+        <div v-if="isLoading" class="catalog-state-card">
+            <div class="catalog-state-icon catalog-spinner"></div>
+            <strong>Memuat katalog fasilitas</strong>
+            <p>Mengambil fasilitas aktif dan jadwal ketersediaannya.</p>
+        </div>
+
+        <div v-else-if="loadError" class="catalog-state-card catalog-state-error">
+            <div class="catalog-state-icon">!</div>
+            <strong>Katalog belum tersedia</strong>
+            <p>{{ loadError }}</p>
+            <button class="catalog-state-action" @click="loadFacilities">Coba lagi</button>
+        </div>
+
+        <div v-else-if="facilities.length === 0" class="catalog-state-card">
+            <div class="catalog-state-icon">▦</div>
+            <strong>Belum ada fasilitas aktif</strong>
+            <p>Fasilitas akan muncul di katalog setelah dibuat Admin dan disetujui Petugas.</p>
+            <span class="catalog-state-note">Silakan cek kembali nanti.</span>
+        </div>
+
+        <div v-else class="availability-grid">
             <!-- Column headers: time slots -->
             <div class="grid-header">
                 <div class="grid-label-col"></div>
@@ -197,8 +227,9 @@ function bookFacility(facilityId) {
                 ></button>
             </div>
 
-            <div v-if="filteredFacilities.length === 0" class="empty-state" style="grid-column: 1/-1; padding: 40px">
-                Tidak ada fasilitas yang cocok dengan filter.
+            <div v-if="filteredFacilities.length === 0" class="catalog-filter-empty">
+                <strong>Tidak ada fasilitas yang cocok</strong>
+                <span>Coba ubah kata kunci atau pilih kategori lain.</span>
             </div>
         </div>
 
@@ -265,7 +296,7 @@ function bookFacility(facilityId) {
 .grid-header,
 .grid-row {
     display: grid;
-    grid-template-columns: 220px repeat(16, minmax(44px, 1fr));
+    grid-template-columns: 220px repeat(26, minmax(44px, 1fr));
     align-items: center;
 }
 .grid-header {
@@ -324,4 +355,29 @@ function bookFacility(facilityId) {
     cursor: not-allowed;
     opacity: 0.65;
 }
+.catalog-state-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 270px;
+    padding: 36px 24px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .75);
+    text-align: center;
+}
+.catalog-state-card strong { color: var(--ink); font-size: 15px; }
+.catalog-state-card p { max-width: 390px; margin: 9px 0 6px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.catalog-state-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: 14px; border-radius: 14px; color: var(--primary); background: var(--primary-soft); font-size: 21px; font-weight: 800; }
+.catalog-state-error { color: #991b1b; background: #fffafa; }
+.catalog-state-error strong { color: #991b1b; }
+.catalog-state-error .catalog-state-icon { color: #b91c1c; background: #fef2f2; }
+.catalog-state-action { margin-top: 14px; padding: 9px 14px; border: 1px solid #bfdbfe; border-radius: 8px; color: var(--primary); background: #fff; font-size: 11px; font-weight: 700; }
+.catalog-state-note { color: #94a3b8; font-size: 11px; }
+.catalog-spinner { border: 3px solid #dbeafe; border-top-color: var(--primary); animation: catalog-spin .8s linear infinite; }
+.catalog-filter-empty { grid-column: 1 / -1; display: grid; gap: 6px; padding: 42px 20px; text-align: center; }
+.catalog-filter-empty strong { color: var(--ink); font-size: 13px; }
+.catalog-filter-empty span { color: var(--muted); font-size: 11px; }
+@keyframes catalog-spin { to { transform: rotate(360deg); } }
 </style>

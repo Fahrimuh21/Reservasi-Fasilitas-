@@ -7,9 +7,12 @@ use App\Http\Requests\StoreFacilityRequest;
 use App\Http\Requests\UpdateFacilityRequest;
 use App\Http\Resources\FacilityResource;
 use App\Models\Facility;
+use App\Models\Reservation;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Admin\FacilityController – CRUD fasilitas oleh Admin (US-16).
@@ -24,6 +27,56 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class FacilityController extends Controller
 {
+    /**
+     * Ringkasan dashboard admin berdasarkan data aktual.
+     *
+     * GET /api/admin/facilities/summary?period=week|month|year
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $period = $request->string('period', 'month')->toString();
+        $start = match ($period) {
+            'week' => now()->subDays(6)->startOfDay(),
+            'year' => now()->startOfYear(),
+            default => now()->subDays(29)->startOfDay(),
+        };
+
+        $reservations = Reservation::where('created_at', '>=', $start);
+        $reports = DB::table('reports')->where('created_at', '>=', $start);
+        $activeFacilities = Facility::active()->count();
+        $reservationCount = (clone $reservations)->count();
+        $approvedCount = (clone $reservations)->where('status', 'approved')->count();
+        $periodDays = max(1, $start->diffInDays(now()) + 1);
+        $usageRate = $activeFacilities === 0
+            ? 0
+            : min(100, (int) round(($approvedCount / ($activeFacilities * $periodDays)) * 100));
+
+        $facilityData = Facility::with(['facilityType', 'location'])
+            ->withCount(['reservations' => fn ($query) => $query->where('created_at', '>=', $start)])
+            ->orderByDesc('reservations_count')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Facility $facility) => [
+                'id' => $facility->id,
+                'name' => $facility->name,
+                'type' => $facility->facilityType?->name,
+                'status' => $facility->status,
+                'reservations' => $facility->reservations_count,
+                'usage' => $activeFacilities === 0 ? 0 : min(100, (int) round(($facility->reservations_count / $periodDays) * 100)),
+            ]);
+
+        return response()->json([
+            'period' => $period,
+            'kpis' => [
+                'reservations' => $reservationCount,
+                'usage_rate' => $usageRate,
+                'reports' => $reports->count(),
+                'active_users' => User::where('account_status', 'active')->count(),
+            ],
+            'facilities' => $facilityData,
+        ]);
+    }
+
     /**
      * List semua fasilitas (semua status) dengan search, filter, dan pagination.
      *
@@ -73,12 +126,13 @@ class FacilityController extends Controller
      * POST /api/admin/facilities
      * Body: code, name, facility_type_id, location_id, capacity, description, status
      *
-     * Status saat tambah hanya boleh 'active' atau 'inactive' (validasi di StoreFacilityRequest).
-     * Status 'maintenance' hanya bisa di-set oleh Petugas via endpoint terpisah.
+    * Fasilitas baru selalu berstatus pending sampai disetujui Petugas.
      */
     public function store(StoreFacilityRequest $request): JsonResponse
     {
-        $facility = Facility::create($request->validated());
+        $data = $request->validated();
+        $data['status'] = Facility::STATUS_PENDING;
+        $facility = Facility::create($data);
 
         $facility->load(['facilityType', 'location']);
 

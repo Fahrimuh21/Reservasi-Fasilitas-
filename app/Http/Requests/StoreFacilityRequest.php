@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * StoreFacilityRequest – Validasi untuk menambah fasilitas baru.
  *
  * Digunakan oleh: POST /api/admin/facilities
- * Status hanya boleh 'active' atau 'inactive' (maintenance hanya bisa di-set oleh Petugas).
+ * Status baru selalu dimulai 'pending' dan menunggu persetujuan Petugas.
  */
 class StoreFacilityRequest extends FormRequest
 {
@@ -29,7 +29,6 @@ class StoreFacilityRequest extends FormRequest
             'location_id'      => 'required|exists:locations,id',
             'capacity'         => 'required|integer|min:1',
             'description'      => 'nullable|string',
-            'status'           => 'required|in:active,inactive',
         ];
     }
 
@@ -51,8 +50,6 @@ class StoreFacilityRequest extends FormRequest
             'capacity.required'         => 'Kapasitas wajib diisi.',
             'capacity.integer'          => 'Kapasitas harus berupa angka.',
             'capacity.min'              => 'Kapasitas minimal 1.',
-            'status.required'           => 'Status wajib dipilih.',
-            'status.in'                 => 'Status hanya boleh active atau inactive.',
         ];
     }
 }

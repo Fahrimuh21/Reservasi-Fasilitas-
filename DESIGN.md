@@ -2197,5 +2197,5 @@ Navbar Height     : 64px
 Sidebar Width     : 248px
 ```
 
-Design system ini harus menjadi acuan saat membuat dan memperbarui seluruh halaman serta komponen Vue.
+Design system ini harus menjadi acuan saat membuat dan memperbarui seluruh halaman serta komponen aaVue.
 

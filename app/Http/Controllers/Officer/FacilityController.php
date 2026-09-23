@@ -14,6 +14,7 @@ use App\Http\Resources\FacilityResource;
  * Semua endpoint dilindungi middleware: auth:sanctum + role:officer (di routes/api.php).
  *
  * Sesuai PRD Anggota 2 FR-5b:
+ * - Menyetujui fasilitas baru (pending → active)
  * - Set fasilitas ke status 'maintenance' (dalam perbaikan)
  * - Kembalikan fasilitas ke status 'active' (selesai perbaikan)
  *
@@ -22,13 +23,13 @@ use App\Http\Resources\FacilityResource;
 class FacilityController extends Controller
 {
     /**
-     * List semua fasilitas (hanya active dan maintenance, hide inactive)
+    * List semua fasilitas yang perlu diketahui petugas (pending, active, maintenance).
      * GET /api/officer/facilities
      */
     public function index(Request $request)
     {
         $query = Facility::with(['facilityType', 'location'])
-            ->whereIn('status', [Facility::STATUS_ACTIVE, Facility::STATUS_MAINTENANCE])
+            ->whereIn('status', [Facility::STATUS_PENDING, Facility::STATUS_ACTIVE, Facility::STATUS_MAINTENANCE])
             ->orderBy('name');
 
         if ($request->filled('search')) {
@@ -36,6 +37,30 @@ class FacilityController extends Controller
         }
 
         return FacilityResource::collection($query->paginate(50));
+    }
+
+    /**
+     * Setujui fasilitas baru agar muncul di katalog user.
+     * PATCH /api/officer/facilities/{facility}/approve
+     */
+    public function approve(Facility $facility): JsonResponse
+    {
+        if ($facility->status !== Facility::STATUS_PENDING) {
+            return response()->json([
+                'message' => "Fasilitas '{$facility->name}' tidak menunggu persetujuan.",
+            ], 422);
+        }
+
+        $facility->update(['status' => Facility::STATUS_ACTIVE]);
+
+        return response()->json([
+            'message' => "Fasilitas '{$facility->name}' berhasil disetujui dan aktif.",
+            'data' => [
+                'id' => $facility->id,
+                'name' => $facility->name,
+                'status' => $facility->status,
+            ],
+        ]);
     }
     /**
      * Tandai fasilitas sebagai 'dalam perbaikan' (US-12).

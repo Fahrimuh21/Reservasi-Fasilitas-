@@ -37,7 +37,13 @@ class FacilityController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        $today = Carbon::today()->toDateString();
         $query = Facility::with(['facilityType', 'location'])
+            ->with(['reservations' => function ($query) use ($today) {
+                $query->where('status', 'approved')
+                    ->whereDate('start_at', $today)
+                    ->select(['id', 'facility_id', 'start_at', 'end_at']);
+            }])
             ->active()
             ->orderBy('name');
 
@@ -65,7 +71,6 @@ class FacilityController extends Controller
         $paginator = $query->paginate($perPage);
 
         // Append availability_today for frontend grid if requested
-        $today = Carbon::today()->toDateString();
         foreach ($paginator->items() as $facility) {
             $facility->availability_today = $this->generateAvailabilitySlots($facility, $today);
         }
@@ -165,10 +170,12 @@ class FacilityController extends Controller
     private function generateAvailabilitySlots(Facility $facility, string $date): array
     {
         // Ambil semua reservasi 'approved' pada tanggal tersebut untuk fasilitas ini
-        $reservations = $facility->reservations()
-            ->where('status', 'approved')
-            ->whereDate('start_at', $date)
-            ->get(['start_at', 'end_at']);
+        $reservations = $facility->relationLoaded('reservations')
+            ? $facility->reservations
+            : $facility->reservations()
+                ->where('status', 'approved')
+                ->whereDate('start_at', $date)
+                ->get(['start_at', 'end_at']);
 
         $slots = [];
         $startHour = 7;  // 07:00

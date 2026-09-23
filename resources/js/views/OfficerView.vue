@@ -9,13 +9,9 @@ import axios from 'axios';
 
 const filterStatus = ref('pending');
 
-const queue = ref([
-    { id: 'REQ-001', user: 'Budi Santoso',  avatar: 'BS', facility: 'Ruang Rapat Merapi',  date: 'Hari ini, 13:00 – 15:00', submitted: '08:42',  color: 'coral',  status: 'pending'  },
-    { id: 'REQ-002', user: 'Rina Wijaya',   avatar: 'RW', facility: 'Studio Kreatif',       date: 'Besok, 10:00 – 12:00',    submitted: '07:15',  color: 'yellow', status: 'pending'  },
-    { id: 'REQ-003', user: 'Andi Saputra',  avatar: 'AS', facility: 'Lapangan Futsal A',    date: 'Kamis, 16:00 – 18:00',    submitted: 'Kemarin', color: 'blue',   status: 'approved' },
-    { id: 'REQ-004', user: 'Siti Rahayu',   avatar: 'SR', facility: 'Lab Komputer Rinjani', date: 'Jumat, 09:00 – 11:00',    submitted: 'Kemarin', color: 'blue',   status: 'rejected' },
-    { id: 'REQ-005', user: 'Deni Kusuma',   avatar: 'DK', facility: 'Ruang Seminar Bromo',  date: 'Senin, 14:00 – 17:00',    submitted: '2 hr lalu', color: 'green', status: 'pending' },
-]);
+const queue = ref([]);
+const isLoadingQueue = ref(true);
+const queueError = ref('');
 
 const statusTabs = [
     { value: 'pending',  label: 'Menunggu' },
@@ -31,14 +27,63 @@ const pendingCount  = computed(() => queue.value.filter(q => q.status === 'pendi
 const approvedCount = computed(() => queue.value.filter(q => q.status === 'approved').length);
 const rejectedCount = computed(() => queue.value.filter(q => q.status === 'rejected').length);
 
-function approve(id) {
-    const item = queue.value.find(q => q.id === id);
-    if (item) item.status = 'approved';
+async function fetchReservations() {
+    isLoadingQueue.value = true;
+    queueError.value = '';
+    try {
+        const response = await axios.get('/api/officer/reservations');
+        queue.value = (response.data.data || []).map(reservation => ({
+            id: reservation.id,
+            user: reservation.user?.name || 'Pengguna',
+            avatar: (reservation.user?.name || 'P').slice(0, 2).toUpperCase(),
+            facility: reservation.facility?.name || 'Fasilitas',
+            date: `${formatDate(reservation.start_at)} - ${formatTime(reservation.end_at)}`,
+            submitted: formatDate(reservation.created_at),
+            color: reservation.status === 'pending' ? 'yellow' : 'blue',
+            status: reservation.status,
+        }));
+    } catch (error) {
+        queueError.value = error.response?.data?.message || 'Antrean reservasi gagal dimuat.';
+    } finally {
+        isLoadingQueue.value = false;
+    }
 }
 
-function reject(id) {
-    const item = queue.value.find(q => q.id === id);
-    if (item) item.status = 'rejected';
+function formatDate(value) {
+    return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+    }).format(new Date(value));
+}
+
+function formatTime(value) {
+    return new Intl.DateTimeFormat('id-ID', {
+        hour: '2-digit', minute: '2-digit'
+    }).format(new Date(value));
+}
+
+async function approveReservation(id) {
+    isLoadingAction.value = true;
+    try {
+        await axios.patch(`/api/officer/reservations/${id}/approve`);
+        await fetchReservations();
+    } catch (error) {
+        alert(error.response?.data?.message || 'Gagal menyetujui reservasi.');
+    } finally {
+        isLoadingAction.value = false;
+    }
+}
+
+async function rejectReservation(id) {
+    if (!confirm('Tolak reservasi ini?')) return;
+    isLoadingAction.value = true;
+    try {
+        await axios.patch(`/api/officer/reservations/${id}/reject`);
+        await fetchReservations();
+    } catch (error) {
+        alert(error.response?.data?.message || 'Gagal menolak reservasi.');
+    } finally {
+        isLoadingAction.value = false;
+    }
 }
 
 // ==========================================
@@ -46,17 +91,25 @@ function reject(id) {
 // ==========================================
 const officerFacilities = ref([]);
 const isLoadingAction = ref(false);
+const isLoadingFacilities = ref(true);
+const facilityError = ref('');
 
 async function fetchOfficerFacilities() {
+    isLoadingFacilities.value = true;
+    facilityError.value = '';
     try {
         const response = await axios.get('/api/officer/facilities?per_page=100');
-        officerFacilities.value = response.data.data;
+        officerFacilities.value = response.data.data || [];
     } catch (e) {
-        console.error("Gagal mengambil fasilitas", e);
+        console.error('Gagal mengambil fasilitas', e);
+        facilityError.value = e.response?.data?.message || 'Data fasilitas gagal dimuat.';
+    } finally {
+        isLoadingFacilities.value = false;
     }
 }
 
 onMounted(() => {
+    fetchReservations();
     fetchOfficerFacilities();
 });
 
@@ -66,9 +119,23 @@ async function setMaintenance(facility) {
     try {
         await axios.patch(`/api/officer/facilities/${facility.id}/set-maintenance`);
         alert('Berhasil diset ke maintenance.');
-        fetchOfficerFacilities();
+        await fetchOfficerFacilities();
     } catch (e) {
         alert(e.response?.data?.message || 'Gagal mengubah status');
+    } finally {
+        isLoadingAction.value = false;
+    }
+}
+
+async function approveFacility(facility) {
+    if (!confirm(`Setujui fasilitas ${facility.name} agar dapat digunakan user?`)) return;
+    isLoadingAction.value = true;
+    try {
+        await axios.patch(`/api/officer/facilities/${facility.id}/approve`);
+        alert('Fasilitas berhasil disetujui dan sekarang aktif.');
+        await fetchOfficerFacilities();
+    } catch (e) {
+        alert(e.response?.data?.message || 'Gagal menyetujui fasilitas');
     } finally {
         isLoadingAction.value = false;
     }
@@ -80,7 +147,7 @@ async function completeMaintenance(facility) {
     try {
         await axios.patch(`/api/officer/facilities/${facility.id}/complete-maintenance`);
         alert('Berhasil dikembalikan ke aktif.');
-        fetchOfficerFacilities();
+        await fetchOfficerFacilities();
     } catch (e) {
         alert(e.response?.data?.message || 'Gagal mengubah status');
     } finally {
@@ -141,7 +208,18 @@ async function completeMaintenance(facility) {
         </div>
 
         <!-- Queue list -->
-        <div class="queue-list">
+        <div v-if="isLoadingQueue" class="officer-empty-card">
+            <div class="officer-empty-icon officer-spinner"></div>
+            <strong>Memuat antrean reservasi</strong>
+            <p>Mengambil permintaan terbaru dari sistem.</p>
+        </div>
+        <div v-else-if="queueError" class="officer-empty-card officer-error-card">
+            <div class="officer-empty-icon">!</div>
+            <strong>Antrean belum tersedia</strong>
+            <p>{{ queueError }}</p>
+            <button class="action-btn approve" @click="fetchReservations">Coba lagi</button>
+        </div>
+        <div v-else class="queue-list">
             <TransitionGroup name="queue" tag="div">
                 <article
                     v-for="item in filteredQueue"
@@ -164,18 +242,20 @@ async function completeMaintenance(facility) {
                         {{ item.status === 'pending' ? 'Pending' : item.status === 'approved' ? 'Approved' : 'Rejected' }}
                     </span>
                     <div v-if="item.status === 'pending'" class="action-buttons">
-                        <button class="action-btn approve" :id="`btn-approve-${item.id}`" @click="approve(item.id)">
+                        <button class="action-btn approve" :id="`btn-approve-${item.id}`" @click="approveReservation(item.id)" :disabled="isLoadingAction">
                             ✓ Setujui
                         </button>
-                        <button class="action-btn reject" :id="`btn-reject-${item.id}`" @click="reject(item.id)">
+                        <button class="action-btn reject" :id="`btn-reject-${item.id}`" @click="rejectReservation(item.id)" :disabled="isLoadingAction">
                             ✕ Tolak
                         </button>
                     </div>
                     <div v-else class="action-placeholder"></div>
                 </article>
             </TransitionGroup>
-            <div v-if="filteredQueue.length === 0" class="empty-state">
-                Tidak ada permintaan dengan status ini.
+            <div v-if="filteredQueue.length === 0" class="officer-empty-card">
+                <div class="officer-empty-icon">✓</div>
+                <strong>{{ filterStatus === 'pending' ? 'Belum ada antrean approval' : 'Belum ada riwayat ' + (filterStatus === 'approved' ? 'persetujuan' : 'penolakan') }}</strong>
+                <p>{{ filterStatus === 'pending' ? 'Permintaan reservasi baru akan muncul di sini setelah pengguna mengajukan reservasi.' : 'Data akan tampil setelah ada keputusan pada permintaan reservasi.' }}</p>
             </div>
         </div>
         <!-- Facility Management (Modul 2) -->
@@ -187,9 +267,19 @@ async function completeMaintenance(facility) {
                 </div>
             </div>
             
-            <div class="queue-list">
+            <div v-if="facilityError" class="empty-state officer-error">
+                {{ facilityError }}
+                <button class="action-btn approve" @click="fetchOfficerFacilities">Coba lagi</button>
+            </div>
+            <div v-else-if="isLoadingFacilities" class="empty-state">Memuat data fasilitas...</div>
+            <div v-else-if="officerFacilities.length === 0" class="officer-empty-card">
+                <div class="officer-empty-icon">▦</div>
+                <strong>Belum ada fasilitas untuk dipantau</strong>
+                <p>Fasilitas aktif atau maintenance yang perlu ditangani akan muncul di sini.</p>
+            </div>
+            <div v-else class="queue-list">
                 <article v-for="f in officerFacilities" :key="f.id" class="queue-card">
-                    <div :class="['facility-icon', f.status === 'maintenance' ? 'yellow' : 'blue']">▦</div>
+                    <div :class="['facility-icon', f.status === 'pending' || f.status === 'maintenance' ? 'yellow' : 'blue']">▦</div>
                     <div class="queue-info">
                         <strong>{{ f.name }}</strong>
                         <span>{{ typeof f.location === 'string' ? f.location : f.location.name }}</span>
@@ -197,12 +287,18 @@ async function completeMaintenance(facility) {
                     <div class="queue-user">
                         <div>
                             <strong>Status Saat Ini:</strong>
-                            <small :class="f.status === 'maintenance' ? 'text-warning' : 'text-success'">
-                                {{ f.status === 'maintenance' ? 'Dalam Perbaikan' : 'Aktif' }}
+                            <small :class="f.status === 'pending' || f.status === 'maintenance' ? 'text-warning' : 'text-success'">
+                                {{ f.status === 'pending' ? 'Menunggu Approval' : (f.status === 'maintenance' ? 'Dalam Perbaikan' : 'Aktif') }}
                             </small>
                         </div>
                     </div>
                     <div class="action-buttons">
+                        <button v-if="f.status === 'pending'"
+                                class="action-btn approve"
+                                @click="approveFacility(f)"
+                                :disabled="isLoadingAction">
+                            ✓ Setujui Fasilitas
+                        </button>
                         <button v-if="f.status === 'active'" 
                                 class="action-btn reject" 
                                 @click="setMaintenance(f)" 
@@ -291,4 +387,33 @@ async function completeMaintenance(facility) {
 .queue-leave-to   { opacity: 0; transform: translateX(10px); }
 .text-warning { color: #d97706; }
 .text-success { color: #16a34a; }
+.officer-error { color: #b91c1c; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.officer-empty-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 42px 24px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    background: rgba(248, 250, 252, .7);
+    text-align: center;
+}
+.officer-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    margin-bottom: 13px;
+    border-radius: 14px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    font-size: 20px;
+    font-weight: 800;
+}
+.officer-empty-card strong { color: var(--ink); font-size: 14px; }
+.officer-empty-card p { max-width: 390px; margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.officer-spinner { border: 3px solid #dbeafe; border-top-color: var(--primary); animation: officer-spin .8s linear infinite; }
+.error-card, .officer-error-card { color: #b91c1c; }
+.officer-error-card strong { color: #991b1b; }
+@keyframes officer-spin { to { transform: rotate(360deg); } }
 </style>
