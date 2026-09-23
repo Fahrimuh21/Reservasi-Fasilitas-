@@ -18,7 +18,8 @@ import {
 
 import {
     clearAuthSession,
-    getAuthUser
+    authUser,
+    getToken
 } from '../auth';
 
 
@@ -29,7 +30,7 @@ const router = useRouter();
 const mobileOpen = ref(false);
 
 
-const user = computed(() => getAuthUser());
+const user = authUser;
 
 
 
@@ -138,7 +139,8 @@ const visibleNavItems = computed(()=>{
 
     return navItems.filter(
         item =>
-        item.roles.includes(role)
+        item.roles.includes(role) ||
+        (!role && item.name === 'facilities')
     );
 
 });
@@ -153,10 +155,21 @@ const visibleNavItems = computed(()=>{
 
 
 async function handleLogout(){
+    const token = getToken();
+
+    // Clear the client session immediately so logout never depends on API availability.
+    clearAuthSession();
+    router.push({ name:'login' });
 
     try{
 
-        await axios.post('/api/logout');
+        if (token) {
+            await axios.post('/api/logout', {}, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+        }
 
 
     }catch(error){
@@ -168,14 +181,6 @@ async function handleLogout(){
 
 
     }finally{
-
-
-        clearAuthSession();
-
-
-        router.push({
-            name:'login'
-        });
 
 
     }
@@ -388,7 +393,7 @@ async function handleLogout(){
 
                     {{
                         user?.name ||
-                        'User'
+                        'Tamu'
                     }}
 
                 </strong>
@@ -399,7 +404,7 @@ async function handleLogout(){
 
                     {{
                         user?.role ||
-                        'member'
+                        'guest'
                     }}
 
                 </small>

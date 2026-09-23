@@ -1,7 +1,10 @@
 import axios from 'axios';
+import { ref } from 'vue';
 
 const AUTH_TOKEN_KEY = 'reservasi_auth_token';
 const AUTH_USER_KEY = 'reservasi_auth_user';
+
+export const authUser = ref(null);
 
 export function getToken() {
     return localStorage.getItem(AUTH_TOKEN_KEY);
@@ -35,17 +38,20 @@ export function applyAuthHeader(token = getToken()) {
 export function setAuthSession(token, user) {
     localStorage.setItem(AUTH_TOKEN_KEY, token);
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+    authUser.value = user;
     applyAuthHeader(token);
 }
 
 export function clearAuthSession() {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(AUTH_USER_KEY);
+    authUser.value = null;
     delete axios.defaults.headers.common.Authorization;
 }
 
 export function restoreAuthSession() {
     const token = getToken();
+    authUser.value = getAuthUser();
     if (token) {
         applyAuthHeader(token);
     }

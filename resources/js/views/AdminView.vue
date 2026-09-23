@@ -14,43 +14,49 @@ const periods = [
     { value: 'year',  label: '1 Tahun' },
 ];
 
-// KPI stats
-const kpis = computed(() => {
-    const multiplier = selectedPeriod.value === 'week' ? 0.25 : selectedPeriod.value === 'year' ? 12 : 1;
-    return [
-        { label: 'Total Reservasi',   value: Math.round(148 * multiplier), delta: '+12%', color: 'coral',  icon: '◷' },
-        { label: 'Tingkat Pemakaian', value: '78%',                        delta: '+5%',  color: 'blue',   icon: '▦' },
-        { label: 'Laporan Kerusakan', value: Math.round(7  * multiplier),  delta: '-3%',  color: 'yellow', icon: '⚠' },
-        { label: 'Pengguna Aktif',    value: Math.round(64 * multiplier),  delta: '+18%', color: 'green',  icon: '✓' },
-    ];
-});
+const dashboardLoading = ref(true);
+const dashboardError = ref('');
+const dashboardStats = ref({ reservations: 0, usage_rate: 0, reports: 0, active_users: 0 });
+
+const kpis = computed(() => [
+    { label: 'Total Reservasi', value: dashboardStats.value.reservations, color: 'coral', icon: '◷' },
+    { label: 'Tingkat Pemakaian', value: `${dashboardStats.value.usage_rate}%`, color: 'blue', icon: '▦' },
+    { label: 'Laporan Kerusakan', value: dashboardStats.value.reports, color: 'yellow', icon: '⚠' },
+    { label: 'Pengguna Aktif', value: dashboardStats.value.active_users, color: 'green', icon: '✓' },
+]);
 
 // Facility utilization
-const facilities = ref([
-    { name: 'Ruang Rapat Merapi',  type: 'Ruang Rapat',   usage: 91, reservations: 42, color: 'coral'  },
-    { name: 'Lapangan Futsal A',   type: 'Olahraga',      usage: 78, reservations: 35, color: 'blue'   },
-    { name: 'Studio Kreatif',      type: 'Kreatif',       usage: 65, reservations: 28, color: 'yellow' },
-    { name: 'Ruang Seminar Bromo', type: 'Ruang Rapat',   usage: 54, reservations: 19, color: 'green'  },
-    { name: 'Lab Komputer Rinjani',type: 'Laboratorium',  usage: 82, reservations: 38, color: 'blue'   },
-    { name: 'Lapangan Basket',     type: 'Olahraga',      usage: 47, reservations: 16, color: 'coral'  },
-]);
+const facilities = ref([]);
 
 const sortedFacilities = computed(() =>
     [...facilities.value].sort((a, b) => b.usage - a.usage)
 );
 
-// Recent admin activity
-const activities = ref([
-    { type: 'approve', text: 'Reservasi REQ-003 (Andi Saputra) disetujui', time: '10 mnt lalu', color: 'green' },
-    { type: 'reject',  text: 'Reservasi REQ-004 (Siti Rahayu) ditolak',    time: '32 mnt lalu', color: 'coral' },
-    { type: 'ticket',  text: 'Tiket TKT-2025-087 (AC Merapi) diselesaikan',time: '1 jam lalu',  color: 'blue'  },
-    { type: 'new',     text: 'Fasilitas baru "Lab Bahasa" ditambahkan',     time: '3 jam lalu',  color: 'yellow'},
-]);
+const activities = ref([]);
 
 function usageBarColor(usage) {
     if (usage >= 80) return '#f27963';
     if (usage >= 60) return '#4a9a76';
     return '#6aafd4';
+}
+
+async function fetchDashboardSummary() {
+    dashboardLoading.value = true;
+    dashboardError.value = '';
+    try {
+        const response = await axios.get(`/api/admin/facilities/summary?period=${selectedPeriod.value}`);
+        dashboardStats.value = response.data.kpis;
+        facilities.value = response.data.facilities || [];
+    } catch (error) {
+        dashboardError.value = error.response?.data?.message || 'Ringkasan dashboard gagal dimuat.';
+    } finally {
+        dashboardLoading.value = false;
+    }
+}
+
+async function changePeriod(period) {
+    selectedPeriod.value = period;
+    await fetchDashboardSummary();
 }
 
 // ==========================================
@@ -62,22 +68,29 @@ const isSubmitting = ref(false);
 const facilityTypes = ref([]);
 const locations = ref([]);
 const adminFacilities = ref([]);
+const isFacilitiesLoading = ref(false);
+const facilityError = ref('');
 
 const facilityForm = ref({
     id: null, code: '', name: '', facility_type_id: '', location_id: '', capacity: 10, description: '', status: 'active'
 });
 
 async function fetchAdminFacilities() {
+    isFacilitiesLoading.value = true;
+    facilityError.value = '';
     try {
         const response = await axios.get('/api/admin/facilities?per_page=100');
-        adminFacilities.value = response.data.data;
+        adminFacilities.value = response.data.data || [];
     } catch (e) {
-        console.error("Gagal mengambil data fasilitas", e);
+        console.error('Gagal mengambil data fasilitas', e);
+        facilityError.value = e.response?.data?.message || 'Data fasilitas gagal dimuat.';
+    } finally {
+        isFacilitiesLoading.value = false;
     }
 }
 
 onMounted(async () => {
-    fetchAdminFacilities();
+    await Promise.all([fetchAdminFacilities(), fetchDashboardSummary()]);
     try {
         const [resTypes, resLocs] = await Promise.all([
             axios.get('/api/facility-types'),
@@ -92,7 +105,7 @@ onMounted(async () => {
 
 function openAddModal() {
     isEditMode.value = false;
-    facilityForm.value = { id: null, code: '', name: '', facility_type_id: '', location_id: '', capacity: 10, description: '', status: 'active' };
+    facilityForm.value = { id: null, code: '', name: '', facility_type_id: '', location_id: '', capacity: 10, description: '', status: 'pending' };
     showModal.value = true;
 }
 
@@ -100,8 +113,8 @@ function openEditModal(f) {
     isEditMode.value = true;
     facilityForm.value = {
         id: f.id, code: f.code, name: f.name, 
-        facility_type_id: f.type.id || f.facility_type_id, 
-        location_id: f.location.id || f.location_id, 
+        facility_type_id: f.type?.id || f.facility_type_id || '',
+        location_id: f.location?.id || f.location_id || '',
         capacity: f.capacity, description: f.description || '', 
         status: f.status
     };
@@ -122,7 +135,7 @@ async function submitFacility() {
         }
         
         showModal.value = false;
-        fetchAdminFacilities();
+        await Promise.all([fetchAdminFacilities(), fetchDashboardSummary()]);
     } catch (e) {
         if (e.response && e.response.data.errors) {
             alert("Validasi Error: " + Object.values(e.response.data.errors).flat().join('\n'));
@@ -138,7 +151,7 @@ async function toggleStatus(f) {
     if (!confirm(`Ubah status fasilitas ${f.name}?`)) return;
     try {
         await axios.patch(`/api/admin/facilities/${f.id}/toggle-status`);
-        fetchAdminFacilities();
+        await Promise.all([fetchAdminFacilities(), fetchDashboardSummary()]);
     } catch (e) {
         alert(e.response?.data?.message || 'Gagal mengubah status');
     }
@@ -160,7 +173,7 @@ async function toggleStatus(f) {
                     v-for="p in periods"
                     :key="p.value"
                     :class="['period-btn', { active: selectedPeriod === p.value }]"
-                    @click="selectedPeriod = p.value"
+                    @click="changePeriod(p.value)"
                 >{{ p.label }}</button>
             </div>
         </div>
@@ -172,9 +185,7 @@ async function toggleStatus(f) {
                 <div>
                     <span>{{ kpi.label }}</span>
                     <strong>{{ kpi.value }}</strong>
-                    <small :class="kpi.delta.startsWith('+') ? 'delta-up' : 'delta-down'">
-                        {{ kpi.delta }} vs periode lalu
-                    </small>
+                    <small>Data aktual dari sistem</small>
                 </div>
             </article>
         </div>
@@ -189,7 +200,24 @@ async function toggleStatus(f) {
                         <p>Diurutkan berdasarkan tingkat pemakaian.</p>
                     </div>
                 </div>
-                <div class="util-list">
+                <div v-if="dashboardLoading" class="dashboard-empty-state">
+                    <span class="dashboard-empty-icon dashboard-spinner"></span>
+                    <strong>Memuat ringkasan</strong>
+                    <p>Menyiapkan data terbaru dari sistem.</p>
+                </div>
+                <div v-else-if="dashboardError" class="dashboard-empty-state dashboard-empty-error">
+                    <span class="dashboard-empty-icon">!</span>
+                    <strong>Ringkasan belum tersedia</strong>
+                    <p>{{ dashboardError }}</p>
+                    <button class="dashboard-empty-action" @click="fetchDashboardSummary">Coba lagi</button>
+                </div>
+                <div v-else-if="sortedFacilities.length === 0" class="dashboard-empty-state">
+                    <span class="dashboard-empty-icon">▦</span>
+                    <strong>Belum ada data utilisasi</strong>
+                    <p>Tambahkan fasilitas dan terima reservasi untuk melihat statistik pemakaian.</p>
+                    <button class="dashboard-empty-action" @click="openAddModal">＋ Tambah Fasilitas</button>
+                </div>
+                <div v-else class="util-list">
                     <div
                         v-for="(f, i) in sortedFacilities"
                         :key="f.name"
@@ -222,7 +250,7 @@ async function toggleStatus(f) {
                         <p>Log aksi admin real-time.</p>
                     </div>
                 </div>
-                <div class="activity-list">
+                <div v-if="activities.length" class="activity-list">
                     <div v-for="act in activities" :key="act.text" class="activity-item">
                         <div :class="['act-dot', act.color]"></div>
                         <div class="activity-info">
@@ -230,6 +258,11 @@ async function toggleStatus(f) {
                             <small>{{ act.time }}</small>
                         </div>
                     </div>
+                </div>
+                <div v-else class="dashboard-empty-state dashboard-empty-compact">
+                    <span class="dashboard-empty-icon">✓</span>
+                    <strong>Belum ada aktivitas</strong>
+                    <p>Aktivitas admin akan muncul di sini.</p>
                 </div>
 
                 <!-- Quick actions -->
@@ -246,39 +279,65 @@ async function toggleStatus(f) {
         </div>
 
         <!-- Manajemen Fasilitas (Modul 2) -->
-        <div class="utilization-panel" style="margin-top: 40px;">
-            <div class="panel-heading" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <section class="facility-management-panel">
+            <div class="facility-management-header">
                 <div>
+                    <p class="eyebrow">DATA MASTER</p>
                     <h2>Manajemen Fasilitas</h2>
-                    <p>Daftar seluruh fasilitas beserta statusnya.</p>
+                    <p>Tambah, edit, dan atur status fasilitas kampus.</p>
                 </div>
-                <button class="btn-submit" @click="openAddModal">＋ Tambah Baru</button>
+                <button class="facility-primary-btn" @click="openAddModal">＋ Tambah Fasilitas</button>
             </div>
-            
-            <div class="util-list">
-                <div v-for="f in adminFacilities" :key="f.id" class="util-row" style="padding: 10px 0; border-bottom: 1px solid var(--line);">
-                    <div :class="['facility-icon', f.status === 'active' ? 'blue' : (f.status === 'inactive' ? 'coral' : 'yellow')]" style="width:32px;height:32px;font-size:14px">▦</div>
-                    <div class="util-info">
-                        <strong>{{ f.code }} - {{ f.name }}</strong>
-                        <span>{{ typeof f.type === 'string' ? f.type : f.type.name }} · {{ typeof f.location === 'string' ? f.location : (f.location.building || f.location.name) }} (Kapasitas: {{ f.capacity }})</span>
+
+            <div v-if="facilityError" class="facility-alert facility-alert-error">
+                {{ facilityError }}
+                <button type="button" @click="fetchAdminFacilities">Coba lagi</button>
+            </div>
+
+            <div v-if="isFacilitiesLoading" class="facility-empty-state">
+                <span class="facility-spinner"></span>
+                <p>Memuat data fasilitas...</p>
+            </div>
+
+            <div v-else-if="adminFacilities.length === 0" class="facility-empty-state">
+                <div class="facility-empty-icon">▦</div>
+                <h3>Belum ada fasilitas</h3>
+                <p>Tambahkan fasilitas pertama untuk mulai mengelola katalog.</p>
+                <button class="facility-outline-btn" @click="openAddModal">Tambah Fasilitas</button>
+            </div>
+
+            <div v-else class="facility-table-wrap">
+                <div class="facility-table-head">
+                    <span>Fasilitas</span>
+                    <span>Detail</span>
+                    <span>Status</span>
+                    <span>Aksi</span>
+                </div>
+                <div v-for="f in adminFacilities" :key="f.id" class="facility-table-row">
+                    <div class="facility-table-name">
+                        <div :class="['facility-icon', f.status === 'active' ? 'blue' : (f.status === 'inactive' ? 'coral' : 'yellow')]"><span>▦</span></div>
+                        <div>
+                            <strong>{{ f.name }}</strong>
+                            <small>{{ f.code }}</small>
+                        </div>
                     </div>
-                    <div class="util-bar-wrap" style="width: auto; gap: 15px;">
-                        <span :style="{ fontWeight: 'bold', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: f.status === 'active' ? '#dcfce7' : (f.status === 'inactive' ? '#fee2e2' : '#fef9c3'), color: f.status === 'active' ? '#166534' : (f.status === 'inactive' ? '#991b1b' : '#854d0e') }">
-                            {{ f.status.toUpperCase() }}
-                        </span>
-                        
-                        <button style="padding: 4px 8px; font-size: 11px; cursor: pointer;" @click="openEditModal(f)">Edit</button>
-                        
-                        <button v-if="f.status !== 'maintenance'" 
-                                style="padding: 4px 8px; font-size: 11px; cursor: pointer;" 
-                                @click="toggleStatus(f)">
+                    <div class="facility-table-detail">
+                        <strong>{{ typeof f.type === 'string' ? f.type : f.type?.name }}</strong>
+                        <small>{{ typeof f.location === 'string' ? f.location : (f.location?.building || f.location?.name) }} · {{ f.capacity }} orang</small>
+                    </div>
+                    <span :class="['facility-status', `facility-status-${f.status}`]">
+                        {{ f.status === 'active' ? 'Aktif' : (f.status === 'inactive' ? 'Nonaktif' : (f.status === 'pending' ? 'Menunggu Approval' : 'Maintenance')) }}
+                    </span>
+                    <div class="facility-actions">
+                        <button class="facility-action-btn" @click="openEditModal(f)">Edit</button>
+                        <button v-if="f.status === 'active' || f.status === 'inactive'" class="facility-action-btn facility-action-secondary" @click="toggleStatus(f)">
                             {{ f.status === 'active' ? 'Nonaktifkan' : 'Aktifkan' }}
                         </button>
+                        <span v-else class="facility-maintenance-note">Diatur petugas</span>
                     </div>
                 </div>
-                <div v-if="adminFacilities.length === 0" style="padding: 20px; text-align: center; color: #8a9892;">Belum ada fasilitas.</div>
             </div>
-        </div>
+        </section>
 
         <!-- Tambah/Edit Fasilitas Modal -->
         <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
@@ -312,12 +371,9 @@ async function toggleStatus(f) {
                         <input type="number" v-model="facilityForm.capacity" min="1" required>
                     </div>
                     
-                    <div class="form-group" v-if="!isEditMode">
-                        <label>Status Awal</label>
-                        <select v-model="facilityForm.status" required>
-                            <option value="active">Active (Langsung Aktif)</option>
-                            <option value="inactive">Inactive (Nonaktif/Draft)</option>
-                        </select>
+                    <div v-if="!isEditMode" class="facility-pending-notice">
+                        <strong>Menunggu persetujuan petugas</strong>
+                        <span>Fasilitas baru akan masuk katalog setelah disetujui oleh Petugas.</span>
                     </div>
                     
                     <div class="form-group">
@@ -339,6 +395,127 @@ async function toggleStatus(f) {
 </template>
 
 <style scoped>
+/* Facility CRUD */
+.facility-management-panel {
+    margin-top: 40px;
+    padding: 28px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, .05);
+}
+.facility-management-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+.facility-management-header h2 { margin: 0 0 6px; font-size: 22px; }
+.facility-management-header p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: 13px; }
+.facility-primary-btn, .facility-outline-btn, .facility-action-btn {
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .15s ease;
+}
+.facility-primary-btn {
+    padding: 11px 16px;
+    background: var(--primary);
+    color: #fff;
+}
+.facility-primary-btn:hover { background: var(--primary-hover); }
+.facility-outline-btn {
+    padding: 9px 14px;
+    color: var(--primary);
+    background: #fff;
+    border: 1px solid #bfdbfe;
+}
+.facility-alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+.facility-alert-error { color: #991b1b; background: #fef2f2; }
+.facility-alert button { color: #991b1b; background: transparent; text-decoration: underline; font-size: 12px; }
+.facility-table-wrap { overflow-x: auto; }
+.facility-table-head, .facility-table-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) 110px minmax(180px, .9fr);
+    gap: 16px;
+    align-items: center;
+    min-width: 760px;
+}
+.facility-table-head {
+    padding: 0 12px 10px;
+    color: #94a3b8;
+    border-bottom: 1px solid var(--line);
+    font: 10px 'DM Mono', monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.facility-table-row {
+    padding: 16px 12px;
+    border-bottom: 1px solid #eef2f7;
+}
+.facility-table-row:last-child { border-bottom: 0; }
+.facility-table-name { display: flex; align-items: center; gap: 11px; }
+.facility-table-name strong, .facility-table-detail strong { display: block; font-size: 13px; }
+.facility-table-name small, .facility-table-detail small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+.facility-table-detail { min-width: 0; }
+.facility-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    font-size: 16px;
+}
+.facility-icon.blue { color: #2563eb; background: #eff6ff; }
+.facility-icon.coral { color: #dc2626; background: #fef2f2; }
+.facility-icon.yellow { color: #a16207; background: #fef9c3; }
+.facility-status {
+    width: fit-content;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.facility-status-active { color: #166534; background: #dcfce7; }
+.facility-status-inactive { color: #991b1b; background: #fee2e2; }
+.facility-status-pending { color: #854d0e; background: #fef3c7; }
+.facility-status-maintenance { color: #854d0e; background: #fef3c7; }
+.facility-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.facility-action-btn { padding: 7px 10px; color: var(--primary); background: #eff6ff; }
+.facility-action-btn:hover { background: #dbeafe; }
+.facility-action-secondary { color: #475569; background: #f1f5f9; }
+.facility-maintenance-note { color: #a16207; font-size: 10px; }
+.facility-pending-notice {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid #fde68a;
+    border-radius: 9px;
+    color: #854d0e;
+    background: #fffbeb;
+    font-size: 11px;
+}
+.facility-pending-notice span { color: #a16207; }
+.facility-empty-state { padding: 44px 20px; text-align: center; color: var(--muted); }
+.facility-empty-state h3 { margin: 12px 0 6px; color: var(--ink); font-size: 16px; }
+.facility-empty-state p { margin: 0 0 18px; font-size: 12px; }
+.facility-empty-icon { margin: 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; color: var(--primary); background: var(--primary-soft); font-size: 22px; }
+.facility-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #dbeafe; border-top-color: var(--primary); border-radius: 50%; animation: facility-spin .8s linear infinite; }
+@keyframes facility-spin { to { transform: rotate(360deg); } }
+
 /* Period selector */
 .period-selector {
     display: flex;
@@ -412,6 +589,45 @@ async function toggleStatus(f) {
 .act-dot.yellow { background: #c9a32e; }
 .activity-info span { display: block; font-size: 12px; }
 .activity-info small { display: block; font-size: 10px; color: #9aa6a1; margin-top: 2px; }
+.dashboard-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 34px 20px;
+    color: var(--muted);
+    text-align: center;
+    font-size: 12px;
+}
+.dashboard-empty-state strong { color: var(--ink); font-size: 13px; }
+.dashboard-empty-state p { max-width: 300px; margin: 7px 0 16px; line-height: 1.5; }
+.dashboard-empty-error { color: #b91c1c; }
+.dashboard-empty-error strong { color: #991b1b; }
+.dashboard-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    font-size: 19px;
+    font-weight: 800;
+}
+.dashboard-empty-error .dashboard-empty-icon { color: #b91c1c; background: #fef2f2; }
+.dashboard-empty-action {
+    padding: 8px 12px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    color: var(--primary);
+    background: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+.dashboard-empty-action:hover { background: var(--primary-soft); }
+.dashboard-empty-compact { min-height: 140px; padding: 20px 12px; }
+.dashboard-spinner { border: 3px solid #dbeafe; border-top-color: var(--primary); animation: dashboard-spin .8s linear infinite; }
+@keyframes dashboard-spin { to { transform: rotate(360deg); } }
 
 /* Quick action buttons */
 .quick-actions { display: grid; gap: 8px; }
@@ -454,4 +670,10 @@ async function toggleStatus(f) {
 .btn-cancel { padding: 8px 16px; background: #f1f5f9; border: none; border-radius: 6px; cursor: pointer; }
 .btn-submit { padding: 8px 16px; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
 .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+
+@media (max-width: 700px) {
+    .facility-management-panel { padding: 20px 16px; }
+    .facility-management-header { flex-direction: column; }
+    .facility-primary-btn { width: 100%; }
+}
 </style>
