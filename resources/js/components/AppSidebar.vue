@@ -213,20 +213,7 @@ async function handleLogout(){
 
     <div class="brand">
 
-
-        <span class="brand-mark">
-
-            R
-
-        </span>
-
-
-        <span class="brand-name">
-
-            RuangKita
-
-        </span>
-
+        <img :src="'/logo.png'" alt="RuangKita Logo" class="sidebar-logo" />
 
     </div>
 
