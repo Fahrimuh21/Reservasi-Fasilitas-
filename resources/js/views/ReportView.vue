@@ -1,342 +1,1492 @@
 <script setup>
-/**
- * ReportView — Screen 4
- * Screen ID: 55597836a1f445e4ab3cd358e0c6155b
- * Form Pelaporan Kerusakan Berfoto & Tiket
- */
-import { ref, reactive } from 'vue';
 
-const submitted   = ref(false);
-const previewUrl  = ref(null);
-const dragOver    = ref(false);
-const ticketId    = ref('');
+import {
+    ref,
+    reactive
+} from "vue";
+
+
+
+const submitted = ref(false);
+
+const ticketNumber = ref("");
+
+const preview = ref(null);
+
+const drag = ref(false);
+
+
+
+
 
 const form = reactive({
-    facility:    '',
-    location:    '',
-    category:    '',
-    severity:    'medium',
-    description: '',
-    photo:       null,
-    reporterName: 'Fahri Ahmad',
-    reporterEmail: 'fahri@campus.ac.id',
+
+facility:"",
+category:"",
+severity:"medium",
+description:"",
+photo:null
+
 });
 
-const facilities = [
-    'Ruang Rapat Merapi', 'Lapangan Futsal A', 'Studio Kreatif',
-    'Ruang Seminar Bromo', 'Lapangan Basket', 'Lab Komputer Rinjani',
+
+
+
+
+const facilities=[
+
+"Ruang Rapat Merapi",
+
+"Lab Komputer Rinjani",
+
+"Studio Kreatif",
+
+"Lapangan Futsal A",
+
+"Ruang Seminar Bromo"
+
 ];
-const categories = ['Listrik & Lampu', 'Plumbing & Sanitasi', 'HVAC / AC', 'Perabot & Furniture', 'Peralatan Elektronik', 'Struktural / Sipil', 'Lainnya'];
-const severities = [
-    { value: 'low',      label: '🟢 Rendah',  desc: 'Tidak mengganggu operasional' },
-    { value: 'medium',   label: '🟡 Sedang',  desc: 'Mengganggu sebagian layanan' },
-    { value: 'high',     label: '🔴 Tinggi',  desc: 'Layanan tidak dapat digunakan' },
+
+
+
+const categories=[
+
+"Elektronik",
+
+"AC / HVAC",
+
+"Listrik",
+
+"Kebersihan",
+
+"Infrastruktur"
+
 ];
+
+
+
+const severities=[
+
+{
+value:"low",
+label:"Rendah",
+icon:"🟢",
+desc:"Tidak mengganggu aktivitas"
+},
+
+
+{
+value:"medium",
+label:"Sedang",
+icon:"🟡",
+desc:"Mengganggu sebagian fungsi"
+},
+
+
+{
+value:"high",
+label:"Kritis",
+icon:"🔴",
+desc:"Fasilitas tidak dapat digunakan"
+}
+
+
+];
+
+
+
+
+
+
 
 const tickets = ref([
-    { id: 'TKT-2025-089', facility: 'Lab Komputer Rinjani', category: 'Peralatan Elektronik', severity: 'high',   status: 'open',        date: '14 Jun' },
-    { id: 'TKT-2025-088', facility: 'Lapangan Futsal A',    category: 'Listrik & Lampu',       severity: 'low',    status: 'in-progress', date: '13 Jun' },
-    { id: 'TKT-2025-087', facility: 'Ruang Rapat Merapi',   category: 'HVAC / AC',             severity: 'medium', status: 'resolved',    date: '11 Jun' },
+
+
+{
+id:"TKT-2026-091",
+title:"AC Lab Komputer mati",
+facility:"Lab Komputer Rinjani",
+category:"AC / HVAC",
+status:"Diproses",
+severity:"high",
+date:"Hari ini"
+},
+
+
+{
+id:"TKT-2026-090",
+title:"Lampu Ruang Rapat redup",
+facility:"Ruang Rapat Merapi",
+category:"Listrik",
+status:"Selesai",
+severity:"low",
+date:"Kemarin"
+}
+
+
 ]);
 
-function handleFileDrop(e) {
-    dragOver.value = false;
-    const file = e.dataTransfer?.files[0] || e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-        form.photo = file;
-        previewUrl.value = URL.createObjectURL(file);
-    }
+
+
+
+
+
+
+
+function uploadFile(e){
+
+
+const file =
+e.target.files[0];
+
+
+setPhoto(file);
+
+
 }
 
-function submitReport() {
-    const id = `TKT-2025-${(90 + tickets.value.length).toString().padStart(3, '0')}`;
-    ticketId.value = id;
-    tickets.value.unshift({
-        id,
-        facility: form.facility,
-        category: form.category,
-        severity: form.severity,
-        status: 'open',
-        date: 'Hari ini',
-    });
-    submitted.value = true;
+
+
+function dropFile(e){
+
+
+drag.value=false;
+
+
+const file =
+e.dataTransfer.files[0];
+
+
+setPhoto(file);
+
+
 }
 
-function resetForm() {
-    Object.assign(form, { facility: '', location: '', category: '', severity: 'medium', description: '', photo: null });
-    previewUrl.value = null;
-    submitted.value  = false;
+
+
+
+
+function setPhoto(file){
+
+
+if(!file)
+return;
+
+
+if(
+file.type.startsWith("image/")
+){
+
+
+form.photo=file;
+
+
+preview.value=
+URL.createObjectURL(file);
+
+
 }
 
-const severityColor = { low: 'blue', medium: 'yellow', high: 'coral' };
-const statusLabel   = { open: 'Terbuka', 'in-progress': 'Diproses', resolved: 'Selesai' };
-const statusClass   = { open: 'pending', 'in-progress': 'pending', resolved: 'confirmed' };
+
+}
+
+
+
+
+
+
+
+function submitReport(){
+
+
+ticketNumber.value =
+"TKT-2026-"
++
+(
+tickets.value.length+92
+)
+.toString()
+.padStart(3,"0");
+
+
+
+
+tickets.value.unshift({
+
+id:ticketNumber.value,
+
+title:
+form.description.substring(0,35)
++
+"...",
+
+facility:form.facility,
+
+category:form.category,
+
+severity:form.severity,
+
+status:"Terbuka",
+
+date:"Baru saja"
+
+
+});
+
+
+
+submitted.value=true;
+
+
+}
+
+
+
+
+
+
+
+function reset(){
+
+submitted.value=false;
+
+preview.value=null;
+
+
+Object.assign(
+form,
+{
+facility:"",
+category:"",
+severity:"medium",
+description:"",
+photo:null
+}
+);
+
+
+}
+
+
+
+const severityMap={
+
+low:"Rendah",
+
+medium:"Sedang",
+
+high:"Kritis"
+
+};
+
+
+
 </script>
 
+
+
+
+
+
+
+
+
 <template>
-    <section class="content-wrap" id="screen-report" data-screen-id="55597836a1f445e4ab3cd358e0c6155b">
 
-        <div class="intro-row">
-            <div>
-                <p class="eyebrow">PELAPORAN KERUSAKAN</p>
-                <h1>Buat Tiket Laporan<span class="sun">✦</span></h1>
-                <p class="subheading">Laporkan kerusakan fasilitas dengan foto pendukung untuk penanganan cepat.</p>
-            </div>
-        </div>
 
-        <div class="report-layout">
+<section
 
-            <!-- === FORM PANEL === -->
-            <div class="form-panel">
+class="content-wrap"
 
-                <!-- Success state -->
-                <div v-if="submitted" class="success-banner">
-                    <div class="success-icon">✓</div>
-                    <div>
-                        <strong>Laporan berhasil dikirim!</strong>
-                        <p>Tiket <strong>{{ ticketId }}</strong> telah dibuat dan akan segera ditangani oleh tim teknis.</p>
-                    </div>
-                    <button class="text-button" @click="resetForm">Buat laporan baru →</button>
-                </div>
+id="screen-report"
 
-                <template v-else>
-                    <!-- Facility & Location -->
-                    <div class="form-group">
-                        <label for="report-facility">Fasilitas *</label>
-                        <select id="report-facility" v-model="form.facility" required>
-                            <option value="" disabled>Pilih fasilitas...</option>
-                            <option v-for="f in facilities" :key="f" :value="f">{{ f }}</option>
-                        </select>
-                    </div>
+>
 
-                    <div class="form-group">
-                        <label for="report-location">Lokasi Spesifik</label>
-                        <input id="report-location" v-model="form.location" placeholder="cth: Meja pojok kiri, dekat jendela" />
-                    </div>
 
-                    <!-- Category & Severity -->
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="report-category">Kategori *</label>
-                            <select id="report-category" v-model="form.category" required>
-                                <option value="" disabled>Pilih kategori...</option>
-                                <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <!-- Severity -->
-                    <div class="form-group">
-                        <label>Tingkat Keparahan *</label>
-                        <div class="severity-options">
-                            <label
-                                v-for="s in severities"
-                                :key="s.value"
-                                :class="['severity-chip', s.value, { selected: form.severity === s.value }]"
-                            >
-                                <input type="radio" v-model="form.severity" :value="s.value" class="sr-only" />
-                                <span>{{ s.label }}</span>
-                                <small>{{ s.desc }}</small>
-                            </label>
-                        </div>
-                    </div>
+<div class="intro-row">
 
-                    <!-- Description -->
-                    <div class="form-group">
-                        <label for="report-desc">Deskripsi Kerusakan *</label>
-                        <textarea
-                            id="report-desc"
-                            v-model="form.description"
-                            rows="4"
-                            placeholder="Jelaskan kerusakan secara detail: apa yang rusak, kapan pertama terdeteksi, dampaknya..."
-                        ></textarea>
-                    </div>
 
-                    <!-- Photo upload -->
-                    <div class="form-group">
-                        <label>Foto Pendukung</label>
-                        <label
-                            class="dropzone"
-                            :class="{ 'dragover': dragOver }"
-                            for="file-upload"
-                            @dragover.prevent="dragOver = true"
-                            @dragleave.prevent="dragOver = false"
-                            @drop.prevent="handleFileDrop"
-                        >
-                            <img v-if="previewUrl" :src="previewUrl" class="photo-preview" alt="Preview foto kerusakan" />
-                            <template v-else>
-                                <span class="dropzone-icon">📷</span>
-                                <span>Seret & lepas foto di sini, atau <u>pilih file</u></span>
-                                <small>JPG, PNG, WEBP — maks 10MB</small>
-                            </template>
-                            <input id="file-upload" type="file" accept="image/*" class="sr-only" @change="handleFileDrop" />
-                        </label>
-                    </div>
+<div>
 
-                    <!-- Submit -->
-                    <button
-                        class="primary-button full"
-                        id="btn-submit-report"
-                        :disabled="!form.facility || !form.category || !form.description"
-                        @click="submitReport"
-                        style="margin-top: 8px"
-                    >
-                        <span>⚑</span> Kirim Laporan &amp; Buat Tiket
-                    </button>
-                </template>
-            </div>
+<p class="eyebrow">
+DAMAGE REPORT
+</p>
 
-            <!-- === TICKET LIST PANEL === -->
-            <div class="ticket-panel">
-                <div class="panel-heading" style="margin-bottom: 16px">
-                    <div>
-                        <h2>Riwayat Tiket</h2>
-                        <p>Tiket yang pernah Anda buat.</p>
-                    </div>
-                </div>
-                <div class="ticket-list">
-                    <article v-for="ticket in tickets" :key="ticket.id" class="ticket-card">
-                        <div :class="['facility-icon', severityColor[ticket.severity]]">⚠</div>
-                        <div class="ticket-info">
-                            <strong>{{ ticket.id }}</strong>
-                            <span>{{ ticket.facility }}</span>
-                            <small>{{ ticket.category }} · {{ ticket.date }}</small>
-                        </div>
-                        <span :class="['status', statusClass[ticket.status]]">{{ statusLabel[ticket.status] }}</span>
-                    </article>
-                </div>
-            </div>
 
-        </div>
-    </section>
+<h1>
+
+Create Ticket
+
+<span class="sun">
+✦
+</span>
+
+</h1>
+
+
+<p class="subheading">
+
+Laporkan kerusakan fasilitas dengan bukti foto agar cepat ditangani.
+
+</p>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="report-grid">
+
+
+
+
+
+<!-- FORM -->
+
+<div class="report-card">
+
+
+
+<div
+
+v-if="submitted"
+
+class="success"
+
+>
+
+
+<div class="success-icon">
+
+✓
+
+</div>
+
+
+<h2>
+Laporan berhasil dibuat
+</h2>
+
+
+<p>
+
+Nomor tiket:
+
+<strong>
+{{ticketNumber}}
+</strong>
+
+</p>
+
+
+
+<button
+
+@click="reset"
+
+>
+
+Buat laporan baru
+
+</button>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+<form
+
+v-else
+
+@submit.prevent="submitReport"
+
+>
+
+
+
+
+<div class="field">
+
+
+<label>
+Fasilitas
+</label>
+
+
+<select v-model="form.facility" required>
+
+
+<option value="">
+Pilih fasilitas
+</option>
+
+
+<option
+
+v-for="f in facilities"
+
+:key="f"
+
+>
+
+{{f}}
+
+</option>
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+Kategori
+</label>
+
+
+<select v-model="form.category" required>
+
+
+<option value="">
+Pilih kategori
+</option>
+
+
+<option
+
+v-for="c in categories"
+
+:key="c"
+
+>
+
+{{c}}
+
+</option>
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+Level Kerusakan
+</label>
+
+
+
+<div class="severity">
+
+
+<label
+
+v-for="s in severities"
+
+:key="s.value"
+
+:class="[
+
+'severity-item',
+
+{
+active:
+form.severity===s.value
+}
+
+]"
+
+
+>
+
+
+<input
+
+type="radio"
+
+v-model="form.severity"
+
+:value="s.value"
+
+/>
+
+
+
+<span>
+
+{{s.icon}}
+
+{{s.label}}
+
+</span>
+
+
+<small>
+
+{{s.desc}}
+
+</small>
+
+
+
+</label>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+Deskripsi
+</label>
+
+
+<textarea
+
+v-model="form.description"
+
+rows="5"
+
+placeholder="
+Jelaskan kondisi kerusakan...
+"
+
+required
+
+></textarea>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+Foto Bukti
+</label>
+
+
+
+<label
+
+class="upload"
+
+:class="{drag}"
+
+@dragover.prevent="drag=true"
+
+@dragleave.prevent="drag=false"
+
+@drop.prevent="dropFile"
+
+>
+
+
+<img
+
+v-if="preview"
+
+:src="preview"
+
+/>
+
+
+<template v-else>
+
+
+<strong>
+📷 Upload Foto
+</strong>
+
+
+<span>
+Tarik file atau klik untuk memilih
+</span>
+
+
 </template>
 
+
+
+<input
+
+type="file"
+
+accept="image/*"
+
+@change="uploadFile"
+
+/>
+
+
+
+</label>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+<button
+
+class="submit"
+
+>
+
+Kirim Laporan →
+
+</button>
+
+
+
+</form>
+
+
+</div>
+
+
+
+
+
+
+
+
+<!-- HISTORY -->
+
+<div class="ticket-panel">
+
+
+
+<div class="panel-title">
+
+
+<h2>
+Recent Tickets
+</h2>
+
+
+<p>
+Status laporan terbaru
+</p>
+
+
+</div>
+
+
+
+
+
+<div
+
+v-for="ticket in tickets"
+
+:key="ticket.id"
+
+class="ticket"
+
+
+>
+
+
+
+<div class="ticket-top">
+
+
+<strong>
+{{ticket.id}}
+</strong>
+
+
+<span
+
+:class="
+'priority '+ticket.severity
+"
+
+>
+
+{{severityMap[ticket.severity]}}
+
+</span>
+
+
+</div>
+
+
+
+
+<h3>
+
+{{ticket.title}}
+
+</h3>
+
+
+
+<p>
+
+{{ticket.facility}}
+
+</p>
+
+
+
+<div class="ticket-footer">
+
+
+<span>
+
+{{ticket.category}}
+
+</span>
+
+
+<b>
+
+{{ticket.status}}
+
+</b>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+</section>
+
+
+</template>
+
+
+
+
+
+
+
+
+
+
 <style scoped>
-.report-layout {
-    display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
-    gap: 24px;
-    margin-top: 32px;
-    align-items: start;
-}
-@media (max-width: 900px) { .report-layout { grid-template-columns: 1fr; } }
 
-.form-panel, .ticket-panel {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 28px;
-}
-.form-group { margin-bottom: 18px; }
-.form-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #6b7a75;
-    text-transform: uppercase;
-    letter-spacing: .8px;
-}
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    font-size: 13px;
-    color: var(--ink);
-    background: #fafcfb;
-    outline: none;
-    transition: border-color 0.15s;
-}
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px var(--primary-soft); }
 
-.form-row { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.report-grid{
 
-/* Severity chips */
-.severity-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
-.severity-chip {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 10px 12px;
-    border: 1.5px solid var(--line);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-.severity-chip span { font-size: 12px; font-weight: 700; }
-.severity-chip small { font-size: 9px; color: #9aa6a1; line-height: 1.4; }
-.severity-chip.low.selected    { border-color: #6aafd4; background: #e3eef4; }
-.severity-chip.medium.selected { border-color: #c9a32e; background: #fbf0d5; }
-.severity-chip.high.selected   { border-color: var(--coral); background: #fbe4df; }
 
-/* Dropzone */
-.dropzone {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 28px;
-    border: 2px dashed var(--line);
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 12px;
-    color: #8a9892;
-    text-align: center;
-    transition: border-color 0.15s, background 0.15s;
-}
-.dropzone:hover, .dropzone.dragover { border-color: var(--primary); background: var(--primary-soft); }
-.dropzone-icon { font-size: 28px; }
-.photo-preview { max-width: 100%; max-height: 180px; border-radius: 8px; object-fit: cover; }
+display:grid;
 
-/* Success banner */
-.success-banner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    text-align: center;
-    padding: 16px 0;
-}
-.success-icon {
-    display: grid;
-    place-items: center;
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: #e1f3e8;
-    color: #3a8f62;
-    font-size: 24px;
-}
-.success-banner strong { display: block; font-size: 16px; }
-.success-banner p { font-size: 12px; color: #8a9892; margin: 4px 0 0; }
 
-/* Ticket list */
-.ticket-list { display: grid; gap: 10px; }
-.ticket-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: #fafcfb;
-}
-.ticket-info { flex: 1; }
-.ticket-info strong { display: block; font: 700 11px 'DM Mono', monospace; color: var(--coral); }
-.ticket-info span   { display: block; font-size: 12px; margin-top: 2px; }
-.ticket-info small  { display: block; font-size: 10px; color: #9aa6a1; margin-top: 2px; }
+grid-template-columns:
+1.2fr
+0.8fr;
 
-/* Accessibility */
-.sr-only {
-    position: absolute;
-    width: 1px; height: 1px;
-    padding: 0; margin: -1px;
-    overflow: hidden; clip: rect(0,0,0,0);
-    white-space: nowrap; border: 0;
+
+gap:25px;
+
+
+margin-top:35px;
+
+
 }
+
+
+
+
+
+
+.report-card,
+.ticket-panel{
+
+
+background:white;
+
+
+border:1px solid var(--line);
+
+
+border-radius:25px;
+
+
+padding:28px;
+
+
+}
+
+
+
+
+
+
+
+.field{
+
+
+margin-bottom:20px;
+
+
+}
+
+
+
+.field label{
+
+
+display:block;
+
+
+font-size:12px;
+
+
+font-weight:800;
+
+
+color:#64748b;
+
+
+margin-bottom:8px;
+
+
+text-transform:uppercase;
+
+
+}
+
+
+
+
+
+.field input,
+.field select,
+.field textarea{
+
+
+width:100%;
+
+
+border:1px solid #e2e8f0;
+
+
+background:#f8fafc;
+
+
+padding:13px;
+
+
+border-radius:14px;
+
+
+outline:none;
+
+
+}
+
+
+
+
+
+.field textarea:focus,
+.field select:focus{
+
+
+border-color:#2563eb;
+
+
+background:white;
+
+
+}
+
+
+
+
+
+
+
+
+.severity{
+
+
+display:grid;
+
+
+grid-template-columns:
+repeat(3,1fr);
+
+
+gap:10px;
+
+
+}
+
+
+
+
+.severity-item{
+
+
+padding:15px;
+
+
+border:1px solid var(--line);
+
+
+border-radius:16px;
+
+
+cursor:pointer;
+
+
+}
+
+
+
+.severity-item input{
+
+
+display:none;
+
+
+}
+
+
+
+.severity-item span{
+
+
+display:block;
+
+
+font-weight:800;
+
+
+font-size:13px;
+
+
+}
+
+
+
+.severity-item small{
+
+
+font-size:10px;
+
+
+color:#64748b;
+
+
+}
+
+
+
+.severity-item.active{
+
+
+border-color:#2563eb;
+
+
+background:#eff6ff;
+
+
+}
+
+
+
+
+
+
+
+
+.upload{
+
+
+height:170px;
+
+
+border:2px dashed #cbd5e1;
+
+
+border-radius:20px;
+
+
+display:flex;
+
+
+flex-direction:column;
+
+
+align-items:center;
+
+
+justify-content:center;
+
+
+cursor:pointer;
+
+
+gap:8px;
+
+
+color:#64748b;
+
+
+overflow:hidden;
+
+
+}
+
+
+
+.upload input{
+
+
+display:none;
+
+
+}
+
+
+
+.upload img{
+
+
+width:100%;
+
+
+height:100%;
+
+
+object-fit:cover;
+
+
+}
+
+
+
+.upload.drag{
+
+
+border-color:#2563eb;
+
+
+background:#eff6ff;
+
+
+}
+
+
+
+
+
+
+.submit{
+
+
+width:100%;
+
+
+padding:15px;
+
+
+border-radius:15px;
+
+
+background:#2563eb;
+
+
+color:white;
+
+
+font-weight:800;
+
+
+}
+
+
+
+.submit:hover{
+
+
+background:#1d4ed8;
+
+
+}
+
+
+
+
+
+
+
+.ticket-panel{
+
+
+background:#0f172a;
+
+
+color:white;
+
+
+}
+
+
+
+.panel-title h2{
+
+
+margin:0;
+
+
+}
+
+
+
+.panel-title p{
+
+
+color:#94a3b8;
+
+
+font-size:13px;
+
+
+}
+
+
+
+
+
+.ticket{
+
+
+margin-top:16px;
+
+
+padding:18px;
+
+
+background:white;
+
+
+color:#0f172a;
+
+
+border-radius:18px;
+
+
+}
+
+
+
+.ticket-top{
+
+
+display:flex;
+
+
+justify-content:space-between;
+
+
+}
+
+
+
+.ticket-top strong{
+
+
+font-size:12px;
+
+
+color:#2563eb;
+
+
+}
+
+
+
+.priority{
+
+
+font-size:10px;
+
+
+padding:5px 10px;
+
+
+border-radius:999px;
+
+
+font-weight:800;
+
+
+}
+
+
+
+.priority.high{
+
+
+background:#fee2e2;
+
+
+color:#dc2626;
+
+
+}
+
+
+.priority.medium{
+
+
+background:#fef3c7;
+
+
+color:#b45309;
+
+
+}
+
+
+
+.priority.low{
+
+
+background:#dcfce7;
+
+
+color:#15803d;
+
+
+}
+
+
+
+
+
+.ticket h3{
+
+
+font-size:14px;
+
+
+margin:12px 0 5px;
+
+
+}
+
+
+
+.ticket p{
+
+
+font-size:12px;
+
+
+color:#64748b;
+
+
+}
+
+
+
+.ticket-footer{
+
+
+display:flex;
+
+
+justify-content:space-between;
+
+
+font-size:11px;
+
+
+}
+
+
+
+.ticket-footer b{
+
+
+color:#2563eb;
+
+
+}
+
+
+
+
+
+.success{
+
+
+text-align:center;
+
+
+padding:60px 20px;
+
+
+}
+
+
+
+.success-icon{
+
+
+width:70px;
+
+
+height:70px;
+
+
+margin:auto;
+
+
+border-radius:50%;
+
+
+display:grid;
+
+
+place-items:center;
+
+
+background:#dcfce7;
+
+
+color:#16a34a;
+
+
+font-size:35px;
+
+
+}
+
+
+
+.success button{
+
+
+margin-top:20px;
+
+
+padding:12px 20px;
+
+
+border-radius:12px;
+
+
+background:#2563eb;
+
+
+color:white;
+
+
+}
+
+
+
+
+
+@media(max-width:900px){
+
+
+.report-grid{
+
+
+grid-template-columns:1fr;
+
+
+}
+
+
+.severity{
+
+
+grid-template-columns:1fr;
+
+
+}
+
+
+}
+
+
+
 </style>

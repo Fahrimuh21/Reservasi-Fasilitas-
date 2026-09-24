@@ -1,191 +1,181 @@
 <script setup>
 
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios';
+import {
+    computed,
+    ref
+} from "vue";
 
 import {
-    Building2,
-    CalendarDays,
-    UserCog,
-    AlertTriangle,
-    LayoutDashboard,
-    LogOut,
-    Menu,
-    CircleHelp
-} from 'lucide-vue-next';
+    useRoute,
+    useRouter
+} from "vue-router";
 
+import axios from "axios";
 
 import {
     clearAuthSession,
-    authUser,
-    getToken
-} from '../auth';
+    getAuthUser
+} from "../auth";
 
 
 
 const router = useRouter();
+const route = useRoute();
 
 
-const mobileOpen = ref(false);
+const collapsed = ref(false);
 
 
-const user = authUser;
+const user = computed(()=>getAuthUser());
 
 
 
-/*
-|--------------------------------------------------------------------------
-| Navigation Items
-|--------------------------------------------------------------------------
-*/
+const menus=[
+
+{
+    name:"facilities",
+    label:"Fasilitas",
+    description:"Katalog fasilitas kampus",
+    icon:"▦",
+    roles:[
+        "user",
+        "officer",
+        "admin"
+    ]
+},
 
 
-const navItems = [
-
-    {
-        name:'facilities',
-
-        label:'Katalog Fasilitas',
-
-        icon:Building2,
-
-        roles:[
-            'user',
-            'officer',
-            'admin'
-        ],
-
-        screenId:
-        '9b4eaf60a859485ea4a2057a9eba4306',
-
-    },
+{
+    name:"reservations",
+    label:"Reservasi Saya",
+    description:"Riwayat peminjaman",
+    icon:"◷",
+    roles:[
+        "user",
+        "admin"
+    ]
+},
 
 
-    {
-        name:'reservations',
-
-        label:'Reservasi Saya',
-
-        icon:CalendarDays,
-
-        roles:[
-            'user'
-        ],
-
-        screenId:
-        'afa48fa655154f92b6194d75a21aa27b',
-
-    },
+{
+    name:"officer",
+    label:"Petugas",
+    description:"Approval reservasi",
+    icon:"✓",
+    roles:[
+        "officer",
+        "admin"
+    ]
+},
 
 
-    {
-        name:'officer',
-
-        label:'Dashboard Petugas',
-
-        icon:UserCog,
-
-        roles:[
-            'officer'
-        ],
-
-        screenId:
-        '27f9c22580c44370a6c9f89785168a63',
-
-    },
+{
+    name:"report",
+    label:"Laporan Kerusakan",
+    description:"Kerusakan fasilitas",
+    icon:"⚠",
+    roles:[
+        "user",
+        "admin"
+    ]
+},
 
 
-    {
-        name:'report',
-
-        label:'Laporan Kerusakan',
-
-        icon:AlertTriangle,
-
-        roles:[
-            'user'
-        ],
-
-        screenId:
-        '55597836a1f445e4ab3cd358e0c6155b',
-
-    },
-
-
-    {
-        name:'admin',
-
-        label:'Dashboard Admin',
-
-        icon:LayoutDashboard,
-
-        roles:[
-            'admin'
-        ],
-
-        screenId:
-        '9400ab25f7044638a44066516e2c8bfd',
-
-    },
+{
+    name:"admin",
+    label:"Admin Panel",
+    description:"Manajemen sistem",
+    icon:"◫",
+    roles:[
+        "admin"
+    ]
+}
 
 ];
 
 
 
-const visibleNavItems = computed(()=>{
+const visibleMenus = computed(()=>{
 
-    const role = user.value?.role;
 
-    return navItems.filter(
-        item =>
-        item.roles.includes(role) ||
-        (!role && item.name === 'facilities')
-    );
+const role = user.value?.role;
+
+
+return menus.filter(menu =>
+
+    menu.roles.includes(role)
+
+);
+
 
 });
 
 
 
-/*
-|--------------------------------------------------------------------------
-| Logout
-|--------------------------------------------------------------------------
-*/
+
+const roleLabel=computed(()=>{
 
 
-async function handleLogout(){
-    const token = getToken();
-
-    // Clear the client session immediately so logout never depends on API availability.
-    clearAuthSession();
-    router.push({ name:'login' });
-
-    try{
-
-        if (token) {
-            await axios.post('/api/logout', {}, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-        }
+return user.value?.role
+?
+user.value.role.toUpperCase()
+:
+"GUEST";
 
 
-    }catch(error){
-
-        console.warn(
-            'Logout API failed:',
-            error
-        );
+});
 
 
-    }finally{
 
 
-    }
+
+function isActive(name){
+
+
+return route.name===name;
+
 
 }
+
+
+
+
+
+
+async function logout(){
+
+
+try{
+
+await axios.post("/api/logout");
+
+}
+
+catch(error){
+
+console.warn(
+"Logout API failed",
+error
+);
+
+}
+
+finally{
+
+
+clearAuthSession();
+
+
+router.push({
+    name:"login"
+});
+
+
+}
+
+
+}
+
 
 
 
@@ -193,312 +183,291 @@ async function handleLogout(){
 
 
 
+
+
 <template>
 
 
-<!-- SIDEBAR -->
-
 <aside
 
-    class="sidebar"
+class="sidebar"
 
-    :class="{
-        'sidebar--mobile-open':mobileOpen
-    }"
+:class="{
+'is-collapsed':collapsed
+}"
 
 >
 
 
-    <!-- BRAND -->
 
-    <div class="brand">
 
-        <img :src="'/logo.png'" alt="RuangKita Logo" class="sidebar-logo" />
+<!-- BRAND -->
 
-    </div>
+<div class="brand">
 
 
+<div class="brand-logo">
 
+R
 
+</div>
 
-    <!-- LABEL -->
 
 
-    <div class="workspace-label">
 
-        WORKSPACE
+<div
+v-if="!collapsed"
+class="brand-info"
+>
 
-    </div>
 
+<strong>
 
+RuangKita
 
+</strong>
 
 
-    <!-- MENU -->
+<span>
 
+Campus Facility
 
-    <nav
+</span>
 
-        class="side-nav"
 
-        aria-label="Primary navigation"
+</div>
 
-    >
 
+</div>
 
-        <RouterLink
 
 
-            v-for="item in visibleNavItems"
 
 
-            :key="item.name"
 
+<div
+v-if="!collapsed"
+class="section-title"
+>
 
-            :to="{
-                name:item.name
-            }"
+WORKSPACE
 
+</div>
 
-            class="nav-item"
 
 
-            active-class="nav-item--active"
 
 
-            :data-screen-id="item.screenId"
 
 
-            :title="item.label"
 
+<nav>
 
-            @click="
-                mobileOpen=false
-            "
 
-        >
 
+<RouterLink
 
 
-            <component
+v-for="item in visibleMenus"
 
-                :is="item.icon"
 
-                class="nav-icon"
+:key="item.name"
 
-            />
 
+:to="{
+name:item.name
+}"
 
 
-            <span class="nav-label">
+class="nav-link"
 
-                {{ item.label }}
 
-            </span>
+:class="{
+active:isActive(item.name)
+}"
 
 
+>
 
-        </RouterLink>
 
 
+<div class="nav-icon">
 
-    </nav>
+{{item.icon}}
 
+</div>
 
 
 
 
 
+<div
+v-if="!collapsed"
+class="nav-content"
+>
 
-    <!-- BOTTOM -->
 
+<strong>
 
-    <div class="sidebar-bottom">
+{{item.label}}
 
+</strong>
 
 
-        <!-- LOGOUT -->
+<small>
 
+{{item.description}}
 
-        <button
+</small>
 
-            class="logout-button"
 
-            @click="handleLogout"
+</div>
 
-        >
 
 
-            <LogOut
+</RouterLink>
 
-                class="nav-icon"
 
-            />
 
+</nav>
 
-            <span class="nav-label">
 
-                Logout
 
-            </span>
 
 
-        </button>
 
 
 
 
+<button
 
-        <!-- USER PROFILE -->
+class="collapse"
 
+@click="collapsed=!collapsed"
 
-        <div class="user-card">
+>
 
 
-            <div class="avatar">
+{{collapsed?'›':'‹'}}
 
 
-                {{
-                    (
-                        user?.name ||
-                        'U'
-                    )
-                    .charAt(0)
-                    .toUpperCase()
-                }}
+</button>
 
 
-            </div>
 
 
 
 
-            <div class="nav-label">
 
 
-                <strong>
 
-                    {{
-                        user?.name ||
-                        'Tamu'
-                    }}
 
-                </strong>
+<div class="sidebar-bottom">
 
 
 
-                <small>
 
-                    {{
-                        user?.role ||
-                        'guest'
-                    }}
 
-                </small>
+<button
 
+class="logout"
 
-            </div>
+@click="logout"
 
+>
 
 
+<span>
 
-            <span class="dots">
+↪
 
-                •••
+</span>
 
-            </span>
 
+<span v-if="!collapsed">
 
+Logout
 
-        </div>
+</span>
 
 
+</button>
 
-    </div>
+
+
+
+
+
+
+
+
+<div class="user-box">
+
+
+<div class="avatar">
+
+
+{{
+
+(user?.name || "U")
+.charAt(0)
+.toUpperCase()
+
+}}
+
+
+
+</div>
+
+
+
+
+
+
+
+<div
+v-if="!collapsed"
+class="user-detail"
+>
+
+
+
+<strong>
+
+{{user?.name}}
+
+</strong>
+
+
+
+<span>
+
+{{roleLabel}}
+
+</span>
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
 
 
 
 
 </aside>
-
-
-
-
-
-
-<!-- TOPBAR -->
-
-
-<div class="topbar-wrapper">
-
-
-<header class="topbar">
-
-
-    <button
-
-        class="mobile-menu-button"
-
-        @click="
-            mobileOpen=!mobileOpen
-        "
-
-        aria-label="Menu"
-
-    >
-
-
-        <Menu
-
-            size="20"
-
-        />
-
-
-    </button>
-
-
-
-
-    <div
-
-        class="breadcrumb-spacer"
-
-    ></div>
-
-
-
-
-    <button
-
-        class="help-button"
-
-        id="btn-help"
-
-        aria-label="Help"
-
-    >
-
-
-        <CircleHelp
-
-            size="18"
-
-        />
-
-
-    </button>
-
-
-
-</header>
-
-
-
-<slot />
-
-
-</div>
 
 
 

@@ -56,3 +56,15 @@ export function restoreAuthSession() {
         applyAuthHeader(token);
     }
 }
+
+export function hasRole(...roles){
+
+    const user = getAuthUser();
+
+    if(!user){
+        return false;
+    }
+
+    return roles.includes(user.role);
+
+}
