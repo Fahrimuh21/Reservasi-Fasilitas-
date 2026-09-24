@@ -23,13 +23,12 @@ use App\Http\Resources\FacilityResource;
 class FacilityController extends Controller
 {
     /**
-    * List semua fasilitas yang perlu diketahui petugas (pending, active, maintenance).
+    * List semua fasilitas beserta kondisi aktualnya untuk petugas.
      * GET /api/officer/facilities
      */
     public function index(Request $request)
     {
         $query = Facility::with(['facilityType', 'location'])
-            ->whereIn('status', [Facility::STATUS_PENDING, Facility::STATUS_ACTIVE, Facility::STATUS_MAINTENANCE])
             ->orderBy('name');
 
         if ($request->filled('search')) {

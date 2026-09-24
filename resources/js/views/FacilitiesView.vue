@@ -3,7 +3,8 @@
 import {
     ref,
     computed,
-    onMounted
+    onMounted,
+    onUnmounted
 } from "vue";
 
 import {
@@ -13,6 +14,7 @@ import {
 import axios from "axios";
 
 import {
+    hasRole,
     isAuthenticated
 } from "../auth";
 
@@ -27,41 +29,15 @@ const searchQuery = ref("");
 const selectedType = ref("all");
 
 const facilities = ref([]);
+const facilityTypes = ref([
+    { value:"all", label:"Semua" }
+]);
 
 const loading = ref(true);
-
-
-
-const types = [
-
-{
-    value:"all",
-    label:"Semua"
-},
-
-{
-    value:"meeting",
-    label:"Meeting"
-},
-
-{
-    value:"lab",
-    label:"Laboratorium"
-},
-
-{
-    value:"creative",
-    label:"Studio"
-},
-
-{
-    value:"sports",
-    label:"Olahraga"
-}
-
-];
-
-
+const loadError = ref("");
+const lastUpdated = ref(null);
+let fetching = false;
+let refreshTimer;
 
 
 
@@ -89,15 +65,25 @@ timeSlots.value.push(
 
 
 async function fetchFacilities(){
+if(fetching) return;
+fetching = true;
 
 
 try{
 
 
-const res =
-await axios.get(
-"/api/facilities?per_page=100"
-);
+const [res, typesRes] = await Promise.all([
+    axios.get("/api/facilities", { params: { per_page: 100 } }),
+    axios.get("/api/facility-types")
+]);
+
+facilityTypes.value = [
+    { value:"all", label:"Semua" },
+    ...typesRes.data.data.map(type => ({
+        value: String(type.id),
+        label: type.name
+    }))
+];
 
 
 
@@ -105,33 +91,17 @@ facilities.value =
 res.data.data.map(f=>{
 
 
-let type="creative";
-
-
-const name =
-(typeof f.type==="string"
-?f.type
-:f.type.name
-).toLowerCase();
-
-
-
-if(name.includes("lab"))
-type="lab";
-
-
-else if(
-name.includes("kelas")
-||
-name.includes("rapat")
-)
-type="meeting";
-
-
-else if(
-name.includes("olahraga")
-)
-type="sports";
+const type = typeof f.type === "object" && f.type?.id
+    ? String(f.type.id)
+    : "unknown";
+const typeName = typeof f.type === "object"
+    ? f.type?.name || "Tipe tidak tersedia"
+    : f.type || "Tipe tidak tersedia";
+const location = typeof f.location === "string"
+    ? f.location
+    : [f.location?.name, f.location?.building, f.location?.floor]
+        .filter(Boolean)
+        .join(" · ");
 
 
 
@@ -162,21 +132,20 @@ return {
 
 id:f.id,
 
+code:f.code,
+
 name:f.name,
 
 type,
 
+typeName,
+
 capacity:f.capacity,
 
 
-location:
+location,
 
-typeof f.location==="string"
-?
-f.location
-:
-(f.location.building ||
- f.location.name),
+description:f.description || "Tidak ada deskripsi fasilitas.",
 
 
 
@@ -191,11 +160,14 @@ status:f.status || "active"
 
 
 });
+loadError.value = "";
+lastUpdated.value = new Date();
 
 
 
 }
 catch(err){
+loadError.value = "Ketersediaan belum dapat diperbarui. Periksa koneksi Anda.";
 
 console.error(
 "facility error",
@@ -208,6 +180,7 @@ err
 finally{
 
 loading.value=false;
+fetching=false;
 
 }
 
@@ -217,7 +190,11 @@ loading.value=false;
 
 
 
-onMounted(fetchFacilities);
+onMounted(() => {
+fetchFacilities();
+refreshTimer = window.setInterval(() => { if(!document.hidden) fetchFacilities(); }, 3000);
+});
+onUnmounted(() => window.clearInterval(refreshTimer));
 
 
 
@@ -284,11 +261,20 @@ x=>x==="available"
 
 }
 
+function statusLabel(status){
+    return {
+        active:"Aktif",
+        inactive:"Tidak aktif",
+        maintenance:"Pemeliharaan",
+        pending:"Menunggu persetujuan"
+    }[status] || status;
+}
 
 
 
 
-function reserve(id){
+
+function reserve(id, slot = null){
 
 
 if(!isAuthenticated()){
@@ -305,9 +291,23 @@ return;
 
 }
 
+if(!hasRole("user")){
+
+alert(
+"Hanya pengguna yang dapat mengajukan reservasi."
+);
+
+return;
+
+}
+
 
 router.push({
-name:"reservations"
+name:"reservations",
+query:{
+facility_id:id,
+...(slot ? {slot} : {})
+}
 });
 
 
@@ -328,6 +328,7 @@ name:"reservations"
 class="content-wrap"
 id="screen-facilities"
 >
+<p v-if="loadError" role="alert">{{loadError}}</p>
 
 
 
@@ -357,6 +358,10 @@ Explore Facilities
 Cari ruang terbaik dan lihat ketersediaan secara realtime.
 
 </p>
+
+<small v-if="lastUpdated" class="refresh-status">
+Data terakhir diperbarui {{lastUpdated.toLocaleTimeString()}}
+</small>
 
 
 </div>
@@ -406,7 +411,7 @@ Cari fasilitas atau lokasi...
 
 <button
 
-v-for="t in types"
+v-for="t in facilityTypes"
 
 :key="t.value"
 
@@ -523,6 +528,10 @@ class="facility-symbol"
 {{f.location}}
 </p>
 
+<small>
+{{f.code}} · {{f.typeName}}
+</small>
+
 
 </div>
 
@@ -536,12 +545,16 @@ f.status
 
 >
 
-{{f.status}}
+{{statusLabel(f.status)}}
 
 </span>
 
 
 </div>
+
+<p class="facility-description">
+{{f.description}}
+</p>
 
 
 
@@ -608,7 +621,7 @@ f.slots[slot]==='booked'
 "
 
 @click="
-reserve(f.id)
+reserve(f.id, slot)
 "
 
 

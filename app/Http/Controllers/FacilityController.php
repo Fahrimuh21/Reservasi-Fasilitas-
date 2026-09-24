@@ -40,7 +40,7 @@ class FacilityController extends Controller
         $today = Carbon::today()->toDateString();
         $query = Facility::with(['facilityType', 'location'])
             ->with(['reservations' => function ($query) use ($today) {
-                $query->where('status', 'approved')
+                $query->whereIn('status', ['pending', 'approved'])
                     ->whereDate('start_at', $today)
                     ->select(['id', 'facility_id', 'start_at', 'end_at']);
             }])
@@ -173,7 +173,7 @@ class FacilityController extends Controller
         $reservations = $facility->relationLoaded('reservations')
             ? $facility->reservations
             : $facility->reservations()
-                ->where('status', 'approved')
+                ->whereIn('status', ['pending', 'approved'])
                 ->whereDate('start_at', $date)
                 ->get(['start_at', 'end_at']);
 
@@ -195,7 +195,7 @@ class FacilityController extends Controller
                 $slots[] = [
                     'start'  => $slotStart->format('H:i'),
                     'end'    => $slotEnd->format('H:i'),
-                    'status' => $isBooked ? 'terisi' : 'tersedia',
+                    'status' => ($isBooked || !$facility->isActive() || $slotStart->isPast()) ? 'terisi' : 'tersedia',
                 ];
             }
         }

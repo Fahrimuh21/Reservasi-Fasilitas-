@@ -1,0 +1,28 @@
+<?php
+
+use App\Models\Facility;
+use App\Models\User;
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+
+require __DIR__.'/../../vendor/autoload.php';
+$app = require __DIR__.'/../../bootstrap/app.php';
+$app->make(Kernel::class)->bootstrap();
+
+$database = getenv('DB_DATABASE');
+if (! $database || file_exists($database) || ! str_starts_with(realpath(dirname($database)), realpath(sys_get_temp_dir()))) {
+    throw new RuntimeException('Browser checks require a new database in a temporary directory.');
+}
+touch($database);
+config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => $database]);
+Artisan::call('migrate', ['--force' => true]);
+$user = User::factory()->create(['name' => 'Pengguna Uji', 'email' => 'browser-user@example.test']);
+$officer = User::factory()->officer()->create(['name' => 'Petugas Uji', 'email' => 'browser-officer@example.test']);
+$type = DB::table('facility_types')->insertGetId(['name' => 'Ruang Rapat']);
+$location = DB::table('locations')->insertGetId(['name' => 'Ruang 1', 'building' => 'Gedung A', 'floor' => '1']);
+$facility = Facility::create([
+    'code' => 'BROWSER-01', 'name' => 'Ruang Rapat Pengujian', 'facility_type_id' => $type,
+    'location_id' => $location, 'capacity' => 20, 'status' => 'active',
+]);
+echo json_encode(['facility_id' => $facility->id, 'date' => now()->addDay()->toDateString()]);

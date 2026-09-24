@@ -371,4 +371,45 @@ async function submitRegister() {
         padding: 28px 22px 32px;
     }
 }
+
+@media (max-width:700px){
+    .auth-shell{
+        min-height:100dvh;
+        padding:24px 14px;
+    }
+
+    .auth-panel{
+        width:min(100%, 460px);
+        min-height:0;
+        grid-template-columns:1fr;
+        border-radius:24px;
+    }
+
+    .auth-illustration{
+        display:none;
+    }
+
+    .auth-card{
+        padding:36px 24px 30px;
+    }
+
+    .auth-header h1{
+        font-size:34px;
+        line-height:1.08;
+    }
+}
+
+@media (max-width:380px){
+    .auth-shell{
+        padding:16px 10px;
+    }
+
+    .auth-card{
+        padding:28px 18px 24px;
+    }
+
+    .auth-header h1{
+        font-size:30px;
+    }
+}
 </style>

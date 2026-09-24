@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ReportPhoto extends Model {
-    protected $fillable = ['report_id', 'photo_path'];
+class ReportPhoto extends Model
+{
+    protected $fillable = ['report_id', 'file_path'];
 }
