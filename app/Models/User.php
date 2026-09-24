@@ -23,13 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',
-        'account_status',
         'user_type',
-        'registration_source',
-        'created_by',
-        'verified_by',
-        'verified_at',
     ];
 
     /**

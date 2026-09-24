@@ -35,6 +35,13 @@ class RoleMiddleware
             ], 401);
         }
 
+        // Fix SEC-2: Pastikan akun tidak di-suspend
+        if ($user->account_status !== 'active') {
+            return response()->json([
+                'message' => 'Forbidden. Akun Anda tidak aktif.',
+            ], 403);
+        }
+
         // Cek role – menggunakan kolom 'role' di tabel users sesuai DESIGN.md
         if (!in_array($user->role, $roles, true)) {
             return response()->json([
