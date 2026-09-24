@@ -52,6 +52,8 @@ AUTH SCREEN
 
 v-if="isAuthPage"
 
+:key="`auth-${route.fullPath}`"
+
 class="auth-layout"
 
 >
@@ -77,6 +79,8 @@ APPLICATION SHELL
 <div
 
 v-else
+
+:key="`app-${route.fullPath}`"
 
 class="app-shell"
 

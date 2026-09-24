@@ -77,6 +77,25 @@ class ReservationWorkflowTest extends TestCase
         $this->assertDatabaseHas('reservations', ['id' => $id, 'status' => 'rejected', 'decision_note' => 'Keperluan tidak sesuai']);
     }
 
+    public function test_officer_can_cancel_an_approved_reservation_with_reason(): void
+    {
+        $id = $this->requestReservation();
+        Sanctum::actingAs($this->officer);
+        $this->patchJson("/api/officer/reservations/$id/approve")
+            ->assertOk();
+
+        $this->patchJson("/api/officer/reservations/$id/cancel", [
+            'cancellation_reason' => 'Fasilitas mendadak tidak dapat digunakan.',
+        ])->assertOk()->assertJsonPath('data.status', 'cancelled');
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $id,
+            'status' => 'cancelled',
+            'cancelled_by' => $this->officer->id,
+            'cancellation_reason' => 'Fasilitas mendadak tidak dapat digunakan.',
+        ]);
+    }
+
     public function test_cancellation_releases_slot_and_cannot_be_approved(): void
     {
         $id = $this->requestReservation();

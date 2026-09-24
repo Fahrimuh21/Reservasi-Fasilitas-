@@ -31,22 +31,22 @@ class RecapController extends Controller
             "Expires"             => "0"
         ];
 
-        $handle = fopen('php://output', 'w');
-        fputcsv($handle, ['ID', 'Pelapor', 'Fasilitas', 'Kategori', 'Status', 'Tanggal']);
+        return response()->stream(function () use ($reports) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['ID', 'Pelapor', 'Fasilitas', 'Kategori', 'Status', 'Tanggal']);
 
-        foreach ($reports as $report) {
-            fputcsv($handle, [
-                $report->id,
-                $report->user->name,
-                $report->facility->name,
-                $report->category,
-                $report->status,
-                $report->created_at->format('Y-m-d')
-            ]);
-        }
+            foreach ($reports as $report) {
+                fputcsv($handle, [
+                    $report->id,
+                    $report->user?->name,
+                    $report->facility?->name,
+                    $report->category,
+                    $report->status,
+                    $report->created_at?->format('Y-m-d'),
+                ]);
+            }
 
-        fclose($handle);
-
-        return response()->stream(function () use ($handle) {}, 200, $headers);
+            fclose($handle);
+        }, 200, $headers);
     }
 }

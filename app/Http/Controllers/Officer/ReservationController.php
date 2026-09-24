@@ -101,4 +101,37 @@ class ReservationController extends Controller
             'data' => $reservation->fresh(['user:id,name,email', 'facility:id,name,code']),
         ]);
     }
+
+    public function cancel(Request $request, Reservation $reservation): JsonResponse
+    {
+        $request->validate([
+            'cancellation_reason' => 'required|string|max:1000',
+        ]);
+
+        $reservation = DB::transaction(function () use ($request, $reservation) {
+            $lockedReservation = Reservation::whereKey($reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedReservation->status !== 'approved') {
+                throw ValidationException::withMessages([
+                    'reservation' => 'Hanya reservasi approved yang dapat dibatalkan petugas.',
+                ]);
+            }
+
+            $lockedReservation->update([
+                'status' => 'cancelled',
+                'cancellation_reason' => $request->cancellation_reason,
+                'cancelled_by' => $request->user()->id,
+                'cancelled_at' => now(),
+            ]);
+
+            return $lockedReservation->fresh(['user:id,name,email', 'facility:id,name,code']);
+        });
+
+        return response()->json([
+            'message' => 'Reservasi berhasil dibatalkan petugas.',
+            'data' => $reservation,
+        ]);
+    }
 }

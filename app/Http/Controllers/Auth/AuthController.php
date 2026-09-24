@@ -80,19 +80,18 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Cek status akun – sesuai state machine PRD Bagian 5 & DESIGN.md Bagian 5
-        match ($user->account_status) {
-            'pending'   => throw \Illuminate\Validation\ValidationException::withMessages([
-                'account' => 'Akun Anda belum diverifikasi oleh Admin. Silakan tunggu konfirmasi.',
-            ]),
-            'rejected'  => throw \Illuminate\Validation\ValidationException::withMessages([
-                'account' => 'Registrasi akun Anda telah ditolak. Hubungi Admin untuk informasi lebih lanjut.',
-            ]),
-            'suspended' => throw \Illuminate\Validation\ValidationException::withMessages([
-                'account' => 'Akun Anda telah dinonaktifkan. Hubungi Admin untuk reaktivasi.',
-            ]),
-            default => null, // 'active' – lanjut
-        };
+        if ($user->account_status !== 'active') {
+            $message = match ($user->account_status) {
+                'pending' => 'Akun Anda belum diverifikasi oleh Admin. Silakan tunggu konfirmasi.',
+                'rejected' => 'Registrasi akun Anda telah ditolak. Hubungi Admin untuk informasi lebih lanjut.',
+                'suspended' => 'Akun Anda telah dinonaktifkan. Hubungi Admin untuk reaktivasi.',
+                default => 'Akun Anda belum aktif dan belum dapat digunakan untuk login.',
+            };
+
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'account' => $message,
+            ]);
+        }
 
         // Generate Sanctum Bearer token
         $token = $user->createToken('auth-token')->plainTextToken;
