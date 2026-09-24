@@ -56,7 +56,9 @@ async function submitRegister() {
 
             <div class="auth-card">
                 <div class="auth-header">
-                    <div class="brand-badge">R</div>
+                    <div class="brand-badge">
+                        <img :src="'/logo.png'" alt="RuangKita Logo" class="brand-logo-img" />
+                    </div>
                     <h1>Buat Akun Baru</h1>
                     <p>Daftar untuk mengajukan reservasi dan laporan fasilitas.</p>
                 </div>
@@ -238,16 +240,22 @@ async function submitRegister() {
 }
 
 .brand-badge {
-    width: 54px;
-    height: 54px;
-    border-radius: 16px;
+    width: 120px;
+    height: 120px;
+    border-radius: 20px;
     display: grid;
     place-items: center;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: white;
-    font-weight: 800;
-    font-size: 24px;
+    background: #ffffff;
+    border: 1.5px solid rgba(37, 99, 235, 0.12);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.10);
+    padding: 8px;
     margin-bottom: 18px;
+}
+
+.brand-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .auth-header h1 {
