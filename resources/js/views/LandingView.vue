@@ -1,68 +1,150 @@
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue';
+import { RouterLink } from 'vue-router';
+import { CalendarPlus, Building2, Sparkles, Bell, Clock } from 'lucide-vue-next';
+
+const currentTime = ref('');
+const currentDate = ref('');
+
+let timer;
+const updateTime = () => {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  currentTime.value = `${hours}:${minutes}`;
+  
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+  currentDate.value = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+};
+
+onMounted(() => {
+  updateTime();
+  timer = setInterval(updateTime, 10000);
+});
+
+onUnmounted(() => {
+  clearInterval(timer);
+});
+</script>
+
 <template>
   <div class="rk-page rk-grid">
-    <header class="w-full pt-5">
+    <header class="w-full pt-5 relative z-50">
       <div class="rk-shell">
-        <nav class="flex items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-white/85 px-4 py-3 shadow-sm backdrop-blur-md sm:px-5" aria-label="Navigasi utama">
-          <div class="flex items-center gap-3">
-            <span class="rk-brand inline-flex rounded-lg bg-blue-600 px-3 py-2 text-xs font-extrabold text-white">
-              RuangKita
-            </span>
-            <div class="hidden items-center gap-2 sm:flex">
-              <span class="rk-dot" aria-hidden="true"></span> 
-              <span class="text-xs font-semibold text-slate-500">Sistem Online</span>
+        <nav class="flex items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-white/85 px-4 py-3 shadow-sm backdrop-blur-md sm:px-5" aria-label="Navigasi utama">
+          
+          <div class="flex items-center gap-4">
+            <RouterLink :to="{ name: 'landing' }" class="rk-focus shrink-0 rounded-lg"> 
+              <span class="rk-brand inline-flex rounded-full bg-white px-3 py-2 text-xs font-extrabold text-blue-600">RUANGKITA</span> 
+            </RouterLink>
+            
+            <div class="hidden items-center gap-2 rounded-full border border-green-100 bg-green-50 px-2.5 py-1 lg:flex" title="Sistem Operasional">
+              <span class="relative flex h-2.5 w-2.5">
+                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500"></span>
+              </span>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-green-700">Sistem Online</span>
             </div>
           </div>
-          <router-link :to="{ name: 'login' }" class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors">
-            <Building2 :size="14" aria-hidden="true" />
-            <span>Masuk Portal</span>
-          </router-link>
+          
+          <div class="hidden md:flex items-center gap-2 rounded-full bg-slate-50 px-4 py-1.5 border border-slate-100">
+            <Clock :size="15" class="text-slate-400" />
+            <span class="text-sm font-medium text-slate-500">{{ currentDate }} <span class="mx-1.5 text-slate-300">|</span> <span class="font-bold text-slate-700">{{ currentTime }}</span></span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <RouterLink :to="{ name: 'login' }" class="rk-btn rk-btn-primary rk-focus hidden bg-blue-600 px-4 py-2 text-sm text-white sm:inline-flex">Masuk</RouterLink> 
+            <RouterLink :to="{ name: 'register' }" class="rk-btn rk-btn-outline rk-focus bg-white px-4 py-2 text-sm text-blue-600">Daftar</RouterLink>
+          </div>
+          
         </nav>
       </div>
     </header>
-
-    <main class="flex min-h-[calc(100vh-92px)] items-center py-12 sm:py-16">
-      <section class="w-full" aria-labelledby="hero-title">
+    
+    <main class="h-full overflow-y-auto pb-20">
+      <section id="beranda" class="rk-hero" aria-labelledby="hero-title">
         <div class="rk-shell">
-          <div class="grid items-center gap-12 lg:grid-cols-[1.03fr_0.97fr] lg:gap-14">
-            <div class="rk-reveal max-w-2xl">
-              <p class="rk-kicker mb-5 text-sm font-bold uppercase text-blue-600">Sistem Manajemen Fasilitas</p>
-              <h1 id="hero-title" class="rk-heading max-w-xl text-4xl font-extrabold text-slate-900 sm:text-5xl lg:text-6xl">
-                Kelola Reservasi & Laporan Fasilitas Kampus
-              </h1>
-              <p class="mt-6 max-w-xl text-base leading-7 text-slate-500 sm:text-lg">
-                Temukan, pesan, dan laporkan fasilitas kampus dalam satu platform terpadu. Antarmuka intuitif untuk mahasiswa, dosen, staf, dan pengelola.
-              </p>
-              <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                <router-link :to="{ name: 'login' }" class="rk-btn rk-btn-primary rk-focus bg-blue-600 text-white">
-                  <CalendarPlus :size="19" aria-hidden="true" />
-                  <span>Mulai Reservasi</span>
-                </router-link>
-                <router-link :to="{ name: 'facilities' }" class="rk-btn rk-btn-secondary rk-focus bg-white text-blue-600 hover:bg-blue-50">
-                  <LayoutGrid :size="19" aria-hidden="true" />
-                  <span>Lihat Fasilitas</span>
-                </router-link>
+          <div class="mx-auto max-w-4xl flex flex-col items-center text-center">
+            
+            <div class="rk-pill rk-reveal inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-extrabold uppercase text-blue-600 shadow-sm">
+              <Sparkles :size="14" aria-hidden="true" />
+              <span>RUANGKITA</span>
+            </div>
+            
+            <h1 class="rk-heading rk-reveal rk-delay mt-5 max-w-2xl font-extrabold text-blue-950 text-[42px] leading-[1.1] text-balance">
+              Kelola fasilitas kampus lebih mudah.
+            </h1>
+            
+            <p class="rk-reveal rk-delay mt-6 max-w-2xl leading-[1.7] text-slate-500 text-base">
+              Reservasi ruang, pantau status fasilitas, dan laporkan kerusakan dengan satu platform.
+            </p>
+            
+            <div class="rk-reveal rk-delay-two mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <RouterLink :to="{ name: 'login' }" class="rk-btn rk-btn-primary rk-focus bg-blue-600 text-white">
+                <CalendarPlus :size="19" aria-hidden="true" />
+                <span>Mulai Reservasi</span>
+              </RouterLink>
+              <RouterLink :to="{ name: 'facilities' }" class="rk-btn rk-btn-outline rk-focus bg-white text-blue-600">
+                <Building2 :size="19" aria-hidden="true" />
+                <span>Lihat Fasilitas</span>
+              </RouterLink>
+            </div>
+            
+            <div class="rk-mockup-wrap rk-reveal rk-delay-two w-full" aria-label="Contoh tampilan reservasi RuangKita">
+              <div class="rk-mockup">
+                <div class="rk-window-top">
+                  <div class="rk-dot-row" aria-hidden="true">
+                    <span class="rk-tiny-dot"></span><span class="rk-tiny-dot"></span><span class="rk-tiny-dot"></span>
+                  </div>
+                  <div class="text-xs font-bold text-slate-500">app.ruangkita.com</div>
+                  <Bell :size="16" class="text-blue-600" aria-label="Notifikasi" />
+                </div>
+                
+                <div class="rk-mini-card one">
+                  <div class="rk-chip">
+                    <span aria-hidden="true">📅</span>
+                    <span>Reservasi</span>
+                  </div>
+                </div>
+                
+                <article class="rk-reservation-card">
+                  <div class="flex items-start justify-between gap-4">
+                    <div>
+                      <p class="text-xs font-bold uppercase tracking-wider text-blue-600">FASILITAS</p>
+                      <h2 class="mt-1 font-extrabold text-blue-950 text-xl">Auditorium Utama</h2>
+                    </div>
+                    <span class="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">Disetujui</span>
+                  </div>
+                  <div class="mt-5 grid grid-cols-2 gap-3 text-left">
+                    <div class="rounded-xl bg-blue-50 p-3">
+                      <p class="text-xs font-semibold text-slate-500">Waktu</p>
+                      <p class="mt-1 text-sm font-extrabold text-blue-950">08:00 - 10:00</p>
+                    </div>
+                    <div class="rounded-xl bg-blue-50 p-3">
+                      <p class="text-xs font-semibold text-slate-500">Kapasitas</p>
+                      <p class="mt-1 text-sm font-extrabold text-blue-950">500 Orang</p>
+                    </div>
+                  </div>
+                </article>
+                
+                <div class="rk-mini-card two">
+                  <div class="rk-chip">
+                    <span aria-hidden="true">✨</span>
+                    <span>Fasilitas</span>
+                  </div>
+                </div>
+                
+                <div class="absolute bottom-5 left-1/2 z-10 -translate-x-1/2">
+                  <div class="rk-chip">
+                    <span aria-hidden="true">✓</span>
+                    <span>Cek Status</span>
+                  </div>
+                </div>
+                
               </div>
             </div>
-            <aside class="rk-visual rk-reveal-delay rounded-3xl bg-white/80" aria-label="Ilustrasi kampus">
-              <div class="absolute inset-0 flex items-center justify-center p-8" aria-hidden="true">
-                <svg viewBox="0 0 520 400" class="relative z-10 w-full max-w-lg" role="img" aria-label="Ilustrasi gedung kampus ceria">
-                  <ellipse cx="260" cy="350" rx="205" ry="24" fill="#bfdbfe" opacity=".55" /> 
-                  <path d="M83 326h354V185L260 95 83 185z" fill="#dbeafe" stroke="#2563eb" stroke-width="5" stroke-linejoin="round" /> 
-                  <path d="M58 190 260 75l202 115" fill="#60a5fa" stroke="#2563eb" stroke-width="6" stroke-linejoin="round" /> 
-                  <path d="M224 326V244a36 36 0 0 1 72 0v82" fill="#2563eb" /> 
-                  <path d="M119 216h48v48h-48zm234 0h48v48h-48zM190 175h42v42h-42zm98 0h42v42h-42z" fill="#fff" stroke="#60a5fa" stroke-width="4" /> 
-                  <path d="M260 75V39m0 0 38 12-38 12" fill="none" stroke="#1d4ed8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" /> 
-                  <circle cx="104" cy="130" r="15" fill="#fbbf24" />
-                  <path d="M104 102v-9m0 83v-9m28-37h9m-83 0h9m57-20 7-7m-59 59 7-7m45 0 7 7m-59-59 7 7" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" /> 
-                  <path d="M409 122c0-14 11-25 25-25s25 11 25 25-11 25-25 25" fill="#34d399" />
-                  <path d="M434 146v28m0-16-17-13m17 22 17-13" stroke="#059669" stroke-width="5" stroke-linecap="round" /> 
-                  <circle cx="165" cy="300" r="12" fill="#fbbf24" />
-                  <path d="M165 312v28m0-17-13 12m13-12 13 12" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" /> 
-                  <circle cx="358" cy="300" r="12" fill="#fb7185" />
-                  <path d="M358 312v28m0-17-13 12m13-12 13 12" stroke="#e11d48" stroke-width="5" stroke-linecap="round" />
-                </svg>
-              </div>
-            </aside>
+            
           </div>
         </div>
       </section>
@@ -70,184 +152,306 @@
   </div>
 </template>
 
-<script setup>
-import { Building2, CalendarPlus, LayoutGrid } from 'lucide-vue-next';
-</script>
-
 <style scoped>
-.rk-page {
-  --rk-blue: #2563eb;
-  --rk-blue-dark: #1d4ed8;
-  --rk-blue-soft: #eff6ff;
-  --rk-line: #dbeafe;
-  --rk-ink: #0f172a;
-  --rk-body: #64748b;
-  --rk-shadow: 0 22px 55px rgba(37, 99, 235, 0.15);
-  --rk-shadow-soft: 0 12px 30px rgba(37, 99, 235, 0.10);
+    :root {
+      --rk-blue: #2563eb;
+      --rk-blue-dark: #1d4ed8;
+      --rk-blue-soft: #eff6ff;
+      --rk-line: #dbeafe;
+      --rk-ink: #172554;
+      --rk-body: #475569;
+      --rk-shadow: 0 22px 55px rgba(37, 99, 235, 0.15);
+      --rk-shadow-soft: 0 12px 30px rgba(37, 99, 235, 0.10);
+    }
 
-  width: 100%;
-  min-height: 100vh;
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  color: var(--rk-ink);
-  background-color: #ffffff;
-}
+    .rk-page {
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      position: fixed;
+      inset: 0;
+      isolation: isolate;
+      color: #172554;
+      background-color: #ffffff;
+    }
 
-.rk-page::before {
-  content: "";
-  position: absolute;
-  z-index: -2;
-  width: 550px;
-  height: 550px;
-  top: -250px;
-  right: -160px;
-  border-radius: 999px;
-  background: rgba(96, 165, 250, 0.25);
-  filter: blur(26px);
-}
+    .rk-grid {
+      background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1px, transparent 1px);
+      background-size: 30px 30px;
+      background-position: center top;
+    }
 
-.rk-page::after {
-  content: "";
-  position: absolute;
-  z-index: -2;
-  width: 430px;
-  height: 430px;
-  bottom: -240px;
-  left: -180px;
-  border-radius: 999px;
-  background: rgba(147, 197, 253, 0.30);
-  filter: blur(24px);
-}
+    .rk-shell {
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
 
-.rk-grid {
-  background-image: radial-gradient(rgba(37, 99, 235, 0.11) 1px, transparent 1px);
-  background-size: 28px 28px;
-  background-position: center top;
-}
+    .rk-focus:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.42);
+      outline-offset: 4px;
+    }
 
-.rk-shell {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
+    .rk-heading {
+      letter-spacing: -0.055em;
+      line-height: 1.03;
+    }
 
-.rk-brand {
-  letter-spacing: 0.13em;
-  box-shadow: 0 7px 18px rgba(37, 99, 235, 0.18);
-}
+    .rk-brand {
+      letter-spacing: 0.13em;
+      box-shadow: 0 7px 18px rgba(37, 99, 235, 0.14);
+    }
 
-.rk-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: #22c55e;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.13);
-}
+    .rk-pill {
+      letter-spacing: 0.12em;
+    }
 
-.rk-kicker {
-  letter-spacing: 0.11em;
-}
+    .rk-nav-link {
+      color: #475569;
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: color 180ms ease;
+    }
 
-.rk-heading {
-  letter-spacing: -0.055em;
-  line-height: 1.04;
-}
+    .rk-nav-link:hover { color: #2563eb; }
 
-.rk-btn {
-  min-height: 50px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  border-radius: 0.9rem;
-  padding: 0.78rem 1.15rem;
-  font-weight: 700;
-  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
-}
+    .rk-btn {
+      min-height: 50px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      border-radius: 0.9rem;
+      padding: 0.78rem 1.2rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+    }
 
-.rk-btn:hover {
-  transform: translateY(-2px);
-}
+    .rk-btn:hover {
+      transform: translateY(-2px);
+    }
 
-.rk-btn-primary {
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.26);
-}
+    .rk-btn-primary {
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.26);
+    }
 
-.rk-btn-primary:hover {
-  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.32);
-}
+    .rk-btn-primary:hover {
+      box-shadow: 0 16px 30px rgba(37, 99, 235, 0.32);
+    }
 
-.rk-btn-secondary {
-  border: 1px solid #bfdbfe;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.06);
-}
+    .rk-btn-outline {
+      border: 1px solid #bfdbfe;
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.06);
+    }
 
-.rk-focus:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.38);
-  outline-offset: 4px;
-}
+    .rk-hero {
+      position: relative;
+      padding: 4.5rem 0 9.5rem;
+    }
 
-.rk-visual {
-  min-height: 430px;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(203, 213, 225, 0.8);
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
-  border-radius: 1.5rem;
-}
+    .rk-hero::before,
+    .rk-hero::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      border-radius: 999px;
+      filter: blur(16px);
+      pointer-events: none;
+    }
 
-.rk-visual::before {
-  content: "";
-  position: absolute;
-  width: 240px;
-  height: 240px;
-  border-radius: 999px;
-  top: -110px;
-  right: -75px;
-  background: rgba(37, 99, 235, 0.06);
-  filter: blur(10px);
-}
+    .rk-hero::before {
+      width: 360px;
+      height: 360px;
+      top: -150px;
+      right: -130px;
+      background: rgba(147, 197, 253, 0.30);
+    }
 
-.rk-visual::after {
-  content: "";
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  border-radius: 999px;
-  left: -80px;
-  bottom: -90px;
-  background: rgba(96, 165, 250, 0.08);
-  filter: blur(12px);
-}
+    .rk-hero::after {
+      width: 300px;
+      height: 300px;
+      bottom: 20px;
+      left: -170px;
+      background: rgba(191, 219, 254, 0.38);
+    }
 
-.rk-reveal {
-  animation: rkReveal 600ms ease both;
-}
+    .rk-mockup-wrap {
+      height: 335px;
+      max-width: 770px;
+      margin: 3.5rem auto -12.6rem;
+      position: relative;
+      overflow: hidden;
+      border-radius: 2rem 2rem 0 0;
+      border: 1px solid rgba(191, 219, 254, 0.92);
+      box-shadow: 0 24px 65px rgba(37, 99, 235, 0.15);
+    }
 
-.rk-reveal-delay {
-  animation: rkReveal 600ms 130ms ease both;
-}
+    .rk-mockup {
+      min-height: 430px;
+      padding: 1.35rem;
+      position: relative;
+      background: linear-gradient(145deg, #dbeafe 0%, #eff6ff 48%, #ffffff 100%);
+    }
 
-@keyframes rkReveal {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+    .rk-mockup::before {
+      content: "";
+      position: absolute;
+      width: 230px;
+      height: 230px;
+      top: -92px;
+      right: -42px;
+      border-radius: 999px;
+      background: rgba(96, 165, 250, 0.22);
+      filter: blur(15px);
+    }
 
-@media (max-width: 767px) {
-  .rk-shell {
-    padding: 0 18px;
-  }
+    .rk-window-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+      padding: 0.78rem 0.9rem;
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(255, 255, 255, 0.92);
+    }
 
-  .rk-visual {
-    min-height: 390px;
-  }
-}
+    .rk-dot-row { display: flex; gap: 5px; }
+    .rk-tiny-dot { width: 7px; height: 7px; border-radius: 50%; background: #93c5fd; }
+    .rk-tiny-dot:first-child { background: #2563eb; }
+
+    .rk-reservation-card {
+      width: min(100%, 450px);
+      position: relative;
+      z-index: 2;
+      margin: 1.45rem auto 0;
+      padding: 1.35rem;
+      border: 1px solid #dbeafe;
+      border-radius: 1.35rem;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.10);
+    }
+
+    .rk-mini-card {
+      position: absolute;
+      z-index: 3;
+      padding: 0.8rem 0.9rem;
+      border: 1px solid rgba(219, 234, 254, 0.96);
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 12px 25px rgba(37, 99, 235, 0.12);
+    }
+
+    .rk-mini-card.one { top: 96px; left: 5%; }
+    .rk-mini-card.two { right: 5%; bottom: 78px; }
+
+    .rk-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.42rem;
+      padding: 0.55rem 0.72rem;
+      border: 1px solid rgba(219, 234, 254, 0.95);
+      border-radius: 999px;
+      background: #ffffff;
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.09);
+      color: #172554;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .rk-glass {
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 18px 42px rgba(37, 99, 235, 0.12);
+    }
+
+    @supports (backdrop-filter: blur(1px)) {
+      .rk-glass { backdrop-filter: blur(15px); }
+    }
+
+    .rk-stat-strip {
+      position: relative;
+      z-index: 3;
+      margin-top: 7.9rem;
+      border-radius: 1.35rem;
+      padding: 0.7rem;
+    }
+
+    .rk-stat {
+      min-height: 96px;
+      padding: 1rem;
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    .rk-card {
+      border: 1px solid #dbeafe;
+      border-radius: 1.5rem;
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.10);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .rk-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 22px 55px rgba(37, 99, 235, 0.15);
+    }
+
+    .rk-icon-box {
+      width: 46px;
+      height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.9rem;
+      background: #eff6ff;
+      color: #2563eb;
+    }
+
+    .rk-step-number {
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 0.875rem;
+      font-weight: 800;
+      box-shadow: 0 8px 16px rgba(37, 99, 235, 0.22);
+    }
+
+    .rk-role {
+      border: 1px solid #dbeafe;
+      border-radius: 1rem;
+      background: #ffffff;
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.06);
+    }
+
+    .rk-reveal {
+      animation: rkReveal 650ms ease both;
+    }
+
+    .rk-delay { animation-delay: 120ms; }
+    .rk-delay-two { animation-delay: 210ms; }
+
+    @keyframes rkReveal {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 767px) {
+      .rk-shell { padding: 0 18px; }
+      .rk-hero { padding-top: 3.4rem; padding-bottom: 8rem; }
+      .rk-mockup-wrap { height: 280px; margin-top: 2.5rem; margin-bottom: -10.6rem; }
+      .rk-mockup { min-height: 400px; padding: 1rem; }
+      .rk-mini-card.one { left: -15px; }
+      .rk-mini-card.two { right: -18px; }
+      .rk-stat-strip { margin-top: 6.3rem; }
+    }
 </style>
