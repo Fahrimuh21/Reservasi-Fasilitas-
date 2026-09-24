@@ -38,11 +38,11 @@ class RecapController extends Controller
             foreach ($reports as $report) {
                 fputcsv($handle, [
                     $report->id,
-                    $report->user->name,
-                    $report->facility->name,
+                    $report->user?->name,
+                    $report->facility?->name,
                     $report->category,
                     $report->status,
-                    $report->created_at->format('Y-m-d')
+                    $report->created_at?->format('Y-m-d'),
                 ]);
             }
 

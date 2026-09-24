@@ -30,7 +30,13 @@ const filtered = computed(() => reservations.value.filter(item =>
 ));
 const initials = name => (name || 'Pengguna').split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
 const openReports = computed(() => reports.value.filter(item => ['new', 'in_progress'].includes(item.status)).length);
-const dialogTitle = computed(() => decision.value?.kind === 'report' ? 'Proses laporan' : decision.value?.action === 'approve' ? 'Konfirmasi reservasi' : 'Tolak reservasi');
+const dialogTitle = computed(() => decision.value?.kind === 'report'
+    ? 'Proses laporan'
+    : decision.value?.action === 'approve'
+        ? 'Konfirmasi reservasi'
+        : decision.value?.action === 'cancel'
+            ? 'Batalkan reservasi'
+            : 'Tolak reservasi');
 const facilityLocation = facility => [
     facility.location?.name,
     facility.location?.building,
@@ -52,7 +58,9 @@ async function submitDecision() {
     try {
         const response = kind === 'report'
             ? await axios.put(`/api/officer/reports/${item.id}`, { status: action, resolution_note: note.value })
-            : await axios.patch(`/api/officer/reservations/${item.id}/${action}`, { decision_note: note.value });
+            : action === 'cancel'
+                ? await axios.patch(`/api/officer/reservations/${item.id}/cancel`, { cancellation_reason: note.value })
+                : await axios.patch(`/api/officer/reservations/${item.id}/${action}`, { decision_note: note.value });
         notice.value = response.data.message;
         decision.value = null;
         await Promise.all([refresh(), refreshReports(), refreshFacilities()]);
@@ -126,9 +134,10 @@ async function changeFacility(item) {
                     <p v-if="item.cancellation_reason">Pembatalan: {{ item.cancellation_reason }}</p>
                     <footer class="wf-request-footer">
                         <span class="wf-reference">REQ-{{ String(item.id).padStart(4, '0') }} / Diajukan {{ formatDate(item.created_at) }}</span>
-                        <div v-if="item.status === 'pending'" class="wf-actions">
-                            <button class="wf-button wf-danger" :disabled="saving" @click="openDecision(item, 'reject')"><X :size="16" /> Tolak</button>
-                            <button class="wf-button wf-primary" :disabled="saving" @click="openDecision(item, 'approve')"><Check :size="16" /> Konfirmasi</button>
+                        <div v-if="['pending', 'approved'].includes(item.status)" class="wf-actions">
+                            <button v-if="item.status === 'pending'" class="wf-button wf-danger" :disabled="saving" @click="openDecision(item, 'reject')"><X :size="16" /> Tolak</button>
+                            <button v-if="item.status === 'pending'" class="wf-button wf-primary" :disabled="saving" @click="openDecision(item, 'approve')"><Check :size="16" /> Konfirmasi</button>
+                            <button v-if="item.status === 'approved'" class="wf-button wf-danger" :disabled="saving" @click="openDecision(item, 'cancel')"><X :size="16" /> Batalkan</button>
                         </div>
                     </footer>
                 </article>
@@ -168,10 +177,10 @@ async function changeFacility(item) {
                 </div>
             </div>
         </section>
-        <WorkflowDialog v-if="decision" :title="dialogTitle" :busy="saving" :submit-label="decision.kind === 'report' ? 'Simpan status' : decision.action === 'approve' ? 'Setujui reservasi' : 'Tolak reservasi'" @close="decision = null" @submit="submitDecision">
+        <WorkflowDialog v-if="decision" :title="dialogTitle" :busy="saving" :submit-label="decision.kind === 'report' ? 'Simpan status' : decision.action === 'approve' ? 'Setujui reservasi' : decision.action === 'cancel' ? 'Batalkan reservasi' : 'Tolak reservasi'" @close="decision = null" @submit="submitDecision">
             <div class="wf-summary"><strong>{{ decision.item.facility?.name }}</strong><span>{{ decision.item.user?.name }}</span><span v-if="decision.kind === 'reservation'">{{ formatDate(decision.item.start_at) }} / {{ formatTime(decision.item.start_at) }} - {{ formatTime(decision.item.end_at) }} WIB</span><p>{{ decision.item.purpose || decision.item.description }}</p></div>
             <label v-if="decision.kind === 'report'">Status<select v-model="decision.action"><option v-if="decision.item.status === 'new'" value="in_progress">Diproses</option><option v-if="decision.item.status === 'new'" value="rejected">Ditolak</option><option v-if="decision.item.status === 'in_progress'" value="resolved">Selesai</option></select></label>
-            <label>Catatan {{ decision.action === 'reject' ? 'penolakan' : '(opsional)' }}<textarea v-model="note" rows="3" maxlength="1000" :required="decision.action === 'reject'" /></label>
+            <label>Catatan {{ ['reject', 'cancel'].includes(decision.action) ? 'alasan' : '(opsional)' }}<textarea v-model="note" rows="3" maxlength="1000" :required="['reject', 'cancel'].includes(decision.action)" /></label>
             <p v-if="actionError" class="wf-notice wf-error" role="alert">{{ actionError }}</p>
         </WorkflowDialog>
     </section>

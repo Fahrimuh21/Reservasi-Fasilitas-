@@ -435,6 +435,8 @@ selectedType=t.value
 </button>
 
 
+
+v-if="hasRole('user')"
 </div>
 
 

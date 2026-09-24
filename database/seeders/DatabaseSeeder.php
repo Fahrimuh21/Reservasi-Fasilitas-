@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\FacilityType;
+use App\Models\Location;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -99,6 +101,33 @@ class DatabaseSeeder extends Seeder
                 ['user',    'pending@reservasi.test', 'password', 'pending (demo verifikasi)'],
             ]
         );
+
+        // Master data diperlukan agar Admin dapat membuat fasilitas melalui UI.
+        // Baris fasilitas itu sendiri sengaja tidak dibuat oleh seeder.
+        FacilityType::firstOrCreate(
+            ['name' => 'Laboratorium'],
+            ['description' => 'Ruang laboratorium untuk praktikum dan penelitian']
+        );
+        FacilityType::firstOrCreate(
+            ['name' => 'Ruang Kelas'],
+            ['description' => 'Ruang kelas untuk perkuliahan dan seminar']
+        );
+        FacilityType::firstOrCreate(
+            ['name' => 'Aula'],
+            ['description' => 'Ruang aula untuk acara besar dan kegiatan kemahasiswaan']
+        );
+
+        foreach ([
+            ['name' => 'Lab Komputer Lt. 1', 'building' => 'Gedung A', 'floor' => '1'],
+            ['name' => 'Ruang Kelas Lt. 2', 'building' => 'Gedung B', 'floor' => '2'],
+            ['name' => 'Lab Jaringan Lt. 1', 'building' => 'Gedung C', 'floor' => '1'],
+            ['name' => 'Aula Utama Lt. 1', 'building' => 'Gedung D', 'floor' => '1'],
+        ] as $location) {
+            Location::firstOrCreate(
+                ['name' => $location['name']],
+                ['building' => $location['building'], 'floor' => $location['floor']]
+            );
+        }
 
     }
 }

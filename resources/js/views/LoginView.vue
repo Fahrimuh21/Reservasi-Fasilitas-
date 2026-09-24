@@ -307,6 +307,16 @@ isSubmitting
 </form>
 
 
+<RouterLink
+class="guest-link"
+:to="{name:'facilities'}"
+>
+
+Masuk sebagai tamu
+
+</RouterLink>
+
+
 
 
 <div class="auth-footer">
@@ -761,6 +771,25 @@ text-align:center;
 .auth-footer a{
 color:#2563eb;
 font-weight:700;
+}
+
+.guest-link{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:44px;
+    margin-top:14px;
+    border:1px solid var(--blue-200);
+    border-radius:12px;
+    color:var(--primary);
+    font-weight:700;
+    text-decoration:none;
+    transition:background .2s ease,border-color .2s ease;
+}
+
+.guest-link:hover{
+    background:var(--blue-50);
+    border-color:var(--primary);
 }
 
 

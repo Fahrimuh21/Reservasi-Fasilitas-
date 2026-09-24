@@ -199,6 +199,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reservations', [OfficerReservationController::class, 'index']);
         Route::patch('/reservations/{reservation}/approve', [OfficerReservationController::class, 'approve']);
         Route::patch('/reservations/{reservation}/reject', [OfficerReservationController::class, 'reject']);
+        Route::patch('/reservations/{reservation}/cancel', [OfficerReservationController::class, 'cancel']);
 
         // Tandai fasilitas sebagai 'dalam perbaikan' (maintenance)
         // PATCH /api/officer/facilities/{facility}/set-maintenance
