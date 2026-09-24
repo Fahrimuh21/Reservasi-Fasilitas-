@@ -48,15 +48,18 @@ label:"1 Tahun"
 
 const stats = ref({
 
-reservations:148,
+reservations:0,
 
-usage:"78",
+usage:0,
 
-reports:7,
+reports:0,
 
-users:64
+users:0
 
 });
+const summaryLoading = ref(true);
+const summaryError = ref("");
+const facilitySummary = ref([]);
 
 
 
@@ -71,17 +74,11 @@ const kpi = computed(()=>[
 {
 title:"Total Reservasi",
 value:
-period.value==="week"
-?"42"
-:
-period.value==="year"
-?"820"
-:
 stats.value.reservations,
 
 icon:"◷",
 
-trend:"+12%",
+trend:"Aktual",
 
 type:"blue"
 
@@ -95,7 +92,7 @@ stats.value.usage+"%",
 
 icon:"▦",
 
-trend:"+5%",
+trend:"Aktual",
 
 type:"green"
 
@@ -109,7 +106,7 @@ stats.value.reports,
 
 icon:"⚠",
 
-trend:"-3%",
+trend:"Aktual",
 
 type:"yellow"
 
@@ -124,7 +121,7 @@ stats.value.users,
 
 icon:"◉",
 
-trend:"+18%",
+trend:"Aktual",
 
 type:"purple"
 
@@ -133,57 +130,39 @@ type:"purple"
 
 ]);
 
-
-
-
-
-
-
-/*
-|--------------------------------------------------------------------------
-| Chart Dummy Data
-|--------------------------------------------------------------------------
-*/
-
-
-const chart=[
-
-{
-day:"Sen",
-value:40
-},
-
-{
-day:"Sel",
-value:65
-},
-
-{
-day:"Rab",
-value:45
-},
-
-{
-day:"Kam",
-value:85
-},
-
-{
-day:"Jum",
-value:70
-},
-
-{
-day:"Sab",
-value:55
-},
-
-{
-day:"Min",
-value:90
+async function loadSummary(){
+    summaryLoading.value = true;
+    try{
+        const response = await axios.get("/api/admin/facilities/summary", {
+            params:{ period:period.value },
+            timeout:10000
+        });
+        const kpis = response.data.kpis || {};
+        stats.value = {
+            reservations:kpis.reservations || 0,
+            usage:kpis.usage_rate || 0,
+            reports:kpis.reports || 0,
+            users:kpis.active_users || 0
+        };
+        facilitySummary.value = response.data.facilities || [];
+        summaryError.value = "";
+    } catch(error){
+        summaryError.value = "Ringkasan belum dapat dimuat dari server.";
+    } finally{
+        summaryLoading.value = false;
+    }
 }
 
-];
+
+
+
+
+
+
+const chart = computed(() => facilitySummary.value.slice(0, 7).map(facility => ({
+    day: facility.name.length > 12 ? `${facility.name.slice(0, 12)}...` : facility.name,
+    value: facility.usage || 0,
+})));
 
 
 
@@ -203,6 +182,8 @@ const types = ref([]);
 
 const locations = ref([]);
 let facilitiesTimer;
+const facilitiesLoading = ref(true);
+const facilitiesError = ref("");
 
 
 const modal = ref(false);
@@ -212,6 +193,7 @@ const editing = ref(false);
 
 
 const saving = ref(false);
+const saveError = ref("");
 
 
 
@@ -270,21 +252,29 @@ try{
 
 const res =
 await axios.get(
-"/api/admin/facilities?per_page=100"
+"/api/admin/facilities?per_page=100",
+{ timeout:10000 }
 );
 
 
 
 facilities.value =
 res.data.data;
+facilitiesError.value = "";
 
 
 }
 
 catch(err){
 
+facilitiesError.value = "Data fasilitas belum dapat dimuat. Periksa koneksi server.";
+
 console.log(err);
 
+}
+
+finally{
+    facilitiesLoading.value = false;
 }
 
 
@@ -349,6 +339,7 @@ loadFacilities();
 
 
 loadMaster();
+loadSummary();
 
 facilitiesTimer = window.setInterval(loadFacilities, 15000);
 
@@ -369,6 +360,7 @@ function openCreate(){
 
 
 editing.value=false;
+saveError.value="";
 
 
 form.value={
@@ -407,6 +399,7 @@ function openEdit(item){
 
 
 editing.value=true;
+saveError.value="";
 
 
 form.value={
@@ -453,6 +446,22 @@ modal.value=true;
 async function saveFacility(){
 
 
+saveError.value="";
+
+const payload={
+    code:String(form.value.code || "").trim(),
+    name:String(form.value.name || "").trim(),
+    facility_type_id:form.value.facility_type_id,
+    location_id:form.value.location_id,
+    capacity:Number(form.value.capacity),
+    description:String(form.value.description || "").trim()
+};
+
+if(!payload.code || !payload.name || !payload.facility_type_id || !payload.location_id || !Number.isInteger(payload.capacity) || payload.capacity < 1){
+    saveError.value="Lengkapi kode, nama, tipe, lokasi, dan kapasitas minimal 1.";
+    return;
+}
+
 saving.value=true;
 
 
@@ -466,7 +475,7 @@ await axios.put(
 
 `/api/admin/facilities/${form.value.id}`,
 
-form.value
+payload
 
 );
 
@@ -480,7 +489,7 @@ await axios.post(
 
 "/api/admin/facilities",
 
-form.value
+payload
 
 );
 
@@ -489,12 +498,15 @@ form.value
 
 
 
-modal.value=false;
-
-
 await loadFacilities();
+modal.value=false;
+}
 
-
+catch(error){
+    const validationErrors=error?.response?.data?.errors;
+    saveError.value=validationErrors
+        ? Object.values(validationErrors).flat()[0]
+        : error?.response?.data?.message || "Fasilitas gagal disimpan ke server.";
 }
 
 finally{
@@ -648,12 +660,12 @@ ADMIN CONTROL
 Analytics Center
 
 <span class="sun">
+
+<p v-if="saveError" class="admin-feedback error-box">
+{{saveError}}
+</p>
 ✦
 </span>
-
-<small>
-{{f.type?.name || "Tipe tidak tersedia"}} · {{facilityLocation(f)}}
-</small>
 
 </h1>
 
@@ -683,7 +695,7 @@ v-for="p in periods"
 
 :class="{active:period===p.value}"
 
-@click="period=p.value"
+@click="period=p.value; loadSummary()"
 
 >
 
@@ -709,6 +721,10 @@ v-for="p in periods"
 
 
 <div class="stat-grid">
+
+<p v-if="summaryError" class="admin-feedback error-box">
+{{summaryError}}
+</p>
 
 
 <article
@@ -969,6 +985,18 @@ CRUD fasilitas kampus
 
 <div class="facility-table">
 
+<p v-if="facilitiesError" class="admin-feedback error-box">
+{{facilitiesError}}
+</p>
+
+<p v-else-if="facilitiesLoading" class="admin-feedback">
+Memuat data fasilitas...
+</p>
+
+<div v-else-if="!facilities.length" class="admin-feedback">
+Belum ada fasilitas. Tambahkan fasilitas pertama melalui tombol Add Facility.
+</div>
+
 
 <div
 
@@ -991,6 +1019,10 @@ class="facility-row"
 <p>
 {{f.name}}
 </p>
+
+<small>
+{{f.type?.name || "Tipe tidak tersedia"}} · {{facilityLocation(f)}}
+</small>
 
 
 </div>
@@ -1103,6 +1135,8 @@ v-model="form.code"
 
 placeholder="Code"
 
+required
+
 />
 
 
@@ -1113,6 +1147,8 @@ v-model="form.name"
 
 placeholder="Name"
 
+required
+
 />
 
 
@@ -1120,26 +1156,38 @@ placeholder="Name"
 
 
 <select
-
 v-model="form.facility_type_id"
-
+required
 >
-
+<option value="" disabled>Pilih tipe fasilitas</option>
 <option
-
 v-for="t in types"
-
 :key="t.id"
-
 :value="t.id"
-
 >
-
 {{t.name}}
-
 </option>
-
 </select>
+
+<select
+v-model="form.location_id"
+required
+>
+<option value="" disabled>Pilih lokasi</option>
+<option
+v-for="location in locations"
+:key="location.id"
+:value="location.id"
+>
+{{location.name}} · {{location.building}} · Lantai {{location.floor}}
+</option>
+</select>
+
+<textarea
+v-model="form.description"
+placeholder="Deskripsi fasilitas"
+rows="3"
+></textarea>
 
 
 
@@ -1154,6 +1202,10 @@ v-model="form.capacity"
 
 placeholder="Capacity"
 
+min="1"
+
+required
+
 />
 
 
@@ -1163,6 +1215,8 @@ placeholder="Capacity"
 
 
 <button
+
+type="button"
 
 @click="modal=false"
 
@@ -1175,7 +1229,11 @@ Cancel
 
 <button
 
+type="button"
+
 @click="saveFacility"
+
+:disabled="saving"
 
 >
 
@@ -1660,7 +1718,8 @@ gap:15px;
 
 
 .modal input,
-.modal select{
+.modal select,
+.modal textarea{
 
 
 padding:12px;
@@ -1694,14 +1753,31 @@ gap:10px;
 
 .modal-action button:last-child{
 
-
 background:#2563eb;
-
 
 color:white;
 
-
 }
+
+
+.admin-feedback{
+    margin:0;
+    padding:24px 16px;
+    border:1px dashed var(--line);
+    border-radius:12px;
+    color:var(--muted);
+    text-align:center;
+    font-size:13px;
+}
+
+.admin-feedback.error-box{
+    border-style:solid;
+    border-color:#fecaca;
+    background:#fef2f2;
+    color:var(--danger);
+}
+
+ 
 
 
 

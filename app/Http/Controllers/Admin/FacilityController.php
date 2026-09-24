@@ -175,6 +175,12 @@ class FacilityController extends Controller
      */
     public function toggleStatus(Facility $facility): JsonResponse
     {
+        if ($facility->status === Facility::STATUS_PENDING) {
+            return response()->json([
+                'message' => "Fasilitas '{$facility->name}' harus disetujui Petugas terlebih dahulu.",
+            ], 422);
+        }
+
         // Admin tidak berwenang mengubah status maintenance (US-12 = domain Petugas)
         if ($facility->status === Facility::STATUS_MAINTENANCE) {
             return response()->json([

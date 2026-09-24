@@ -16,7 +16,8 @@ import { Building2, CalendarDays, ClipboardCheck, Wrench, Settings, ChevronLeft,
 
 import {
     clearAuthSession,
-    authUser
+    authUser,
+    getToken
 } from "../auth";
 
 
@@ -168,11 +169,22 @@ onUnmounted(() => window.clearTimeout(mobileAnimationTimer));
 
 
 async function logout(){
+const token = getToken();
+clearAuthSession();
+await router.replace({
+    name:"login"
+});
 
 
 try{
 
-await axios.post("/api/logout");
+if(token){
+    await axios.post("/api/logout", {}, {
+        headers:{
+            Authorization:`Bearer ${token}`
+        }
+    });
+}
 
 }
 
@@ -182,19 +194,6 @@ console.warn(
 "Logout API failed",
 error
 );
-
-}
-
-finally{
-
-
-clearAuthSession();
-
-
-router.push({
-    name:"login"
-});
-
 
 }
 

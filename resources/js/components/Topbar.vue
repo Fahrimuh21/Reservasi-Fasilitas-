@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { LogIn, LogOut } from 'lucide-vue-next';
 import axios from 'axios';
-import { authUser, clearAuthSession } from '../auth';
+import { authUser, clearAuthSession, getToken } from '../auth';
 
 const route = useRoute();
 const router = useRouter();
@@ -13,12 +13,20 @@ const title = computed(() => route.meta.title || 'RuangKita');
 async function logout() {
     if (signingOut.value) return;
     signingOut.value = true;
+    const token = getToken();
+    clearAuthSession();
+    await router.replace({ name: 'login' });
+
     try {
-        await axios.post('/api/logout');
+        if (token) {
+            await axios.post('/api/logout', {}, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+        }
+    } catch (error) {
+        console.warn('Logout API failed', error);
     } finally {
-        clearAuthSession();
         signingOut.value = false;
-        router.push({ name: 'login' });
     }
 }
 </script>
