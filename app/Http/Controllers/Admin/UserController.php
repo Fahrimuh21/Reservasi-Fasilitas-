@@ -140,7 +140,7 @@ class UserController extends Controller
     {
         $admin = $request->user();
 
-        $user = User::create([
+        $user = User::forceCreate([
             'name'                => $request->name,
             'email'               => $request->email,
             'password'            => Hash::make($request->password),
