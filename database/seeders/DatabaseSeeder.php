@@ -29,24 +29,24 @@ class DatabaseSeeder extends Seeder
         // =====================================================================
         // 1. Admin
         // =====================================================================
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@reservasi.test'],
-            [
+        $admin = User::firstOrNew(['email' => 'admin@reservasi.test']);
+        if (!$admin->exists) {
+            $admin->forceFill([
                 'name'                => 'Administrator Sistem',
                 'password'            => Hash::make('password'),
                 'role'                => 'admin',
                 'account_status'      => 'active',
                 'registration_source' => 'admin_created',
-            ]
-        );
+            ])->save();
+        }
 
         // =====================================================================
         // 2. Officer (Petugas)
         // Tidak pernah registrasi mandiri – selalu dibuat admin (US-13 SRS)
         // =====================================================================
-        User::firstOrCreate(
-            ['email' => 'petugas@reservasi.test'],
-            [
+        $officer = User::firstOrNew(['email' => 'petugas@reservasi.test']);
+        if (!$officer->exists) {
+            $officer->forceFill([
                 'name'                => 'Petugas Fasilitas',
                 'password'            => Hash::make('password'),
                 'role'                => 'officer',
@@ -55,16 +55,16 @@ class DatabaseSeeder extends Seeder
                 'created_by'          => $admin->id,
                 'verified_by'         => $admin->id,
                 'verified_at'         => now(),
-            ]
-        );
+            ])->save();
+        }
 
         // =====================================================================
         // 3. Regular User (Pengguna / Mahasiswa)
         // Status 'active' untuk demo; normalnya user self-register → pending → admin approve
         // =====================================================================
-        User::firstOrCreate(
-            ['email' => 'user@reservasi.test'],
-            [
+        $user = User::firstOrNew(['email' => 'user@reservasi.test']);
+        if (!$user->exists) {
+            $user->forceFill([
                 'name'                => 'Pengguna Mahasiswa',
                 'password'            => Hash::make('password'),
                 'role'                => 'user',
@@ -73,23 +73,23 @@ class DatabaseSeeder extends Seeder
                 'registration_source' => 'self_register',
                 'verified_by'         => $admin->id,
                 'verified_at'         => now(),
-            ]
-        );
+            ])->save();
+        }
 
         // =====================================================================
         // 4. Contoh akun 'pending' untuk demo verifikasi admin
         // =====================================================================
-        User::firstOrCreate(
-            ['email' => 'pending@reservasi.test'],
-            [
+        $pending = User::firstOrNew(['email' => 'pending@reservasi.test']);
+        if (!$pending->exists) {
+            $pending->forceFill([
                 'name'                => 'Calon Pengguna (Pending)',
                 'password'            => Hash::make('password'),
                 'role'                => 'user',
                 'account_status'      => 'pending',
                 'user_type'           => 'dosen',
                 'registration_source' => 'self_register',
-            ]
-        );
+            ])->save();
+        }
 
         $this->command->info('✓ Seeder selesai. Akun demo:');
         $this->command->table(

@@ -3,6 +3,7 @@ import { isAuthenticated, hasRole } from '../auth';
 
 const LoginView = () => import('../views/LoginView.vue');
 const RegisterView = () => import('../views/RegisterView.vue');
+const LandingView = () => import('../views/LandingView.vue');
 const FacilitiesView = () => import('../views/FacilitiesView.vue');
 const ReservationsView = () => import('../views/ReservationsView.vue');
 const OfficerView = () => import('../views/OfficerView.vue');
@@ -10,9 +11,9 @@ const ReportView = () => import('../views/ReportView.vue');
 const AdminView = () => import('../views/AdminView.vue');
 
 const routes = [
-    { path: '/login', name: 'login', component: LoginView, meta: { title: 'Login' } },
-    { path: '/register', name: 'register', component: RegisterView, meta: { title: 'Register' } },
-    { path: '/', redirect: '/facilities' },
+    { path: '/', name: 'landing', component: LandingView, meta: { title: 'Selamat Datang' } },
+    { path: '/login', name: 'login', component: LoginView, meta: { title: 'Masuk' } },
+    { path: '/register', name: 'register', component: RegisterView, meta: { title: 'Daftar' } },
     {
         path: '/facilities',
         name: 'facilities',
@@ -53,21 +54,31 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-    const publicPages = ['login', 'register'];
+    const publicPages = ['login', 'register', 'landing'];
 
+    // If user sudah login tetapi mencoba mengakses page publik, alihkan ke dashboard default (facilities)
     if (publicPages.includes(to.name) && isAuthenticated()) {
-        next({ name: 'facilities' });
-        return;
+        // Jika mencoba ke landing, alihkan ke dashboard sesuai role
+        if (to.name === 'landing') {
+            // role based redirect
+            // Note: hasRole checks authUser role via token payload (already set in auth.js)
+            if (hasRole('admin')) return next({ name: 'admin' });
+            if (hasRole('officer')) return next({ name: 'officer' });
+            if (hasRole('user')) return next({ name: 'facilities' });
+            // fallback
+            return next({ name: 'facilities' });
+        }
+        return next({ name: 'facilities' });
     }
 
+    // Jika halaman tidak publik dan user belum login, arahkan ke login
     if (!publicPages.includes(to.name) && !to.meta?.public && !isAuthenticated()) {
-        next({ name: 'login' });
-        return;
+        return next({ name: 'login' });
     }
 
+    // Role based protection
     if (isAuthenticated() && to.meta?.roles && !hasRole(...to.meta.roles)) {
-        next({ name: 'facilities' });
-        return;
+        return next({ name: 'facilities' });
     }
 
     next();

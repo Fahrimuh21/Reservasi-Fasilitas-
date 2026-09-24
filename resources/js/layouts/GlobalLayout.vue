@@ -18,6 +18,7 @@ const route = useRoute();
 
 
 const authPages = [
+    "landing",
     "login",
     "register"
 ];

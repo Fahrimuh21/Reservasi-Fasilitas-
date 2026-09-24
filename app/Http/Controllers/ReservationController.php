@@ -53,9 +53,9 @@ class ReservationController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('System error: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Terjadi kesalahan sistem.',
-                'error' => $e->getMessage()
+                'message' => 'Terjadi kesalahan sistem.'
             ], 500);
         }
     }
@@ -103,9 +103,9 @@ class ReservationController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('System error: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Terjadi kesalahan sistem.',
-                'error' => $e->getMessage()
+                'message' => 'Terjadi kesalahan sistem.'
             ], 500);
         }
     }
