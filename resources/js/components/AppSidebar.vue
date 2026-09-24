@@ -2,7 +2,8 @@
 
 import {
     computed,
-    ref
+    ref,
+    onUnmounted
 } from "vue";
 
 import {
@@ -11,10 +12,11 @@ import {
 } from "vue-router";
 
 import axios from "axios";
+import { Building2, CalendarDays, ClipboardCheck, Wrench, Settings, ChevronLeft, ChevronRight, LogOut, Menu, X as CloseIcon } from 'lucide-vue-next';
 
 import {
     clearAuthSession,
-    getAuthUser
+    authUser
 } from "../auth";
 
 
@@ -24,9 +26,13 @@ const route = useRoute();
 
 
 const collapsed = ref(false);
+const mobileOpen = ref(false);
+const showMobileClose = ref(false);
+let mobileAnimationTimer;
 
 
-const user = computed(()=>getAuthUser());
+const user = authUser;
+const menuIcons = { facilities: Building2, reservations: CalendarDays, officer: ClipboardCheck, report: Wrench, admin: Settings };
 
 
 
@@ -38,6 +44,7 @@ const menus=[
     description:"Katalog fasilitas kampus",
     icon:"▦",
     roles:[
+        "guest",
         "user",
         "officer",
         "admin"
@@ -51,8 +58,7 @@ const menus=[
     description:"Riwayat peminjaman",
     icon:"◷",
     roles:[
-        "user",
-        "admin"
+        "user"
     ]
 },
 
@@ -63,8 +69,7 @@ const menus=[
     description:"Approval reservasi",
     icon:"✓",
     roles:[
-        "officer",
-        "admin"
+        "officer"
     ]
 },
 
@@ -75,8 +80,7 @@ const menus=[
     description:"Kerusakan fasilitas",
     icon:"⚠",
     roles:[
-        "user",
-        "admin"
+        "user"
     ]
 },
 
@@ -98,7 +102,7 @@ const menus=[
 const visibleMenus = computed(()=>{
 
 
-const role = user.value?.role;
+const role = user.value?.role || "guest";
 
 
 return menus.filter(menu =>
@@ -136,6 +140,27 @@ return route.name===name;
 
 
 }
+
+function closeMobile(){
+    window.clearTimeout(mobileAnimationTimer);
+    showMobileClose.value = false;
+    mobileOpen.value = false;
+}
+
+function toggleMobile(){
+    if (mobileOpen.value) {
+        closeMobile();
+        return;
+    }
+
+    mobileOpen.value = true;
+    window.clearTimeout(mobileAnimationTimer);
+    mobileAnimationTimer = window.setTimeout(() => {
+        showMobileClose.value = true;
+    }, 250);
+}
+
+onUnmounted(() => window.clearTimeout(mobileAnimationTimer));
 
 
 
@@ -188,12 +213,34 @@ router.push({
 <template>
 
 
+<button
+class="mobile-sidebar-toggle"
+:class="{ 'is-open':mobileOpen }"
+type="button"
+title="Buka menu"
+aria-label="Buka menu"
+@click="toggleMobile"
+>
+<Menu v-if="!showMobileClose" :size="21" />
+<CloseIcon v-else :size="21" />
+</button>
+
+
+<div
+v-if="mobileOpen"
+class="mobile-sidebar-backdrop"
+aria-hidden="true"
+@click="closeMobile"
+></div>
+
+
 <aside
 
 class="sidebar"
 
 :class="{
-'is-collapsed':collapsed
+'is-collapsed':collapsed,
+'mobile-open':mobileOpen
 }"
 
 >
@@ -280,11 +327,14 @@ name:item.name
 
 
 class="nav-link"
+:title="item.label"
+:aria-label="item.label"
 
 
 :class="{
 active:isActive(item.name)
 }"
+@click="closeMobile"
 
 
 >
@@ -293,7 +343,7 @@ active:isActive(item.name)
 
 <div class="nav-icon">
 
-{{item.icon}}
+<component :is="menuIcons[item.name]" :size="20" />
 
 </div>
 
@@ -342,13 +392,15 @@ class="nav-content"
 <button
 
 class="collapse"
+:title="collapsed ? 'Perluas menu' : 'Ciutkan menu'"
+:aria-label="collapsed ? 'Perluas menu' : 'Ciutkan menu'"
 
 @click="collapsed=!collapsed"
 
 >
 
 
-{{collapsed?'›':'‹'}}
+<ChevronRight v-if="collapsed" :size="18" /><ChevronLeft v-else :size="18" />
 
 
 </button>
@@ -371,6 +423,9 @@ class="collapse"
 <button
 
 class="logout"
+v-if="user"
+title="Keluar"
+aria-label="Keluar"
 
 @click="logout"
 
@@ -379,7 +434,7 @@ class="logout"
 
 <span>
 
-↪
+<LogOut :size="18" />
 
 </span>
 

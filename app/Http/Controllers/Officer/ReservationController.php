@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Officer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Facility;
 use App\Models\Reservation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,15 +28,21 @@ class ReservationController extends Controller
 
     public function approve(Request $request, Reservation $reservation): JsonResponse
     {
-        if ($reservation->status !== 'pending') {
-            return response()->json([
-                'message' => 'Hanya reservasi pending yang dapat disetujui.',
-            ], 422);
-        }
+        $request->validate(['decision_note' => 'nullable|string|max:1000']);
 
         $conflict = DB::transaction(function () use ($request, $reservation) {
             // The same facility lock makes concurrent approvals deterministic.
-            \App\Models\Facility::whereKey($reservation->facility_id)->lockForUpdate()->firstOrFail();
+            $facility = Facility::whereKey($reservation->facility_id)->lockForUpdate()->firstOrFail();
+            $reservation = Reservation::whereKey($reservation->id)->lockForUpdate()->firstOrFail();
+            if ($reservation->status !== 'pending') {
+                throw ValidationException::withMessages(['reservation' => 'Reservasi sudah diproses atau dibatalkan.']);
+            }
+            if (! $facility->isActive()) {
+                throw ValidationException::withMessages(['facility' => 'Fasilitas tidak aktif atau sedang dalam perbaikan.']);
+            }
+            if ($reservation->start_at->isPast()) {
+                throw ValidationException::withMessages(['reservation' => 'Jadwal reservasi sudah lewat.']);
+            }
 
             $hasConflict = Reservation::where('id', '!=', $reservation->id)
                 ->where('facility_id', $reservation->facility_id)
@@ -52,6 +59,7 @@ class ReservationController extends Controller
                 'status' => 'approved',
                 'handled_by' => $request->user()->id,
                 'handled_at' => now(),
+                'decision_note' => $request->decision_note,
             ]);
 
             return false;
@@ -71,22 +79,22 @@ class ReservationController extends Controller
 
     public function reject(Request $request, Reservation $reservation): JsonResponse
     {
-        if ($reservation->status !== 'pending') {
-            return response()->json([
-                'message' => 'Hanya reservasi pending yang dapat ditolak.',
-            ], 422);
-        }
-
         $request->validate([
             'decision_note' => 'nullable|string|max:1000',
         ]);
 
-        $reservation->update([
-            'status' => 'rejected',
-            'handled_by' => $request->user()->id,
-            'handled_at' => now(),
-            'decision_note' => $request->decision_note,
-        ]);
+        DB::transaction(function () use ($request, $reservation) {
+            $reservation = Reservation::whereKey($reservation->id)->lockForUpdate()->firstOrFail();
+            if ($reservation->status !== 'pending') {
+                throw ValidationException::withMessages(['reservation' => 'Reservasi sudah diproses atau dibatalkan.']);
+            }
+            $reservation->update([
+                'status' => 'rejected',
+                'handled_by' => $request->user()->id,
+                'handled_at' => now(),
+                'decision_note' => $request->decision_note,
+            ]);
+        });
 
         return response()->json([
             'message' => 'Reservasi berhasil ditolak.',

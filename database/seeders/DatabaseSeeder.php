@@ -3,24 +3,16 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\Facility;
-use App\Models\FacilityType;
-use App\Models\Location;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * DatabaseSeeder – Seeder akun demo & data fasilitas untuk kebutuhan pengujian & submission.
+ * DatabaseSeeder – Seeder akun demo untuk kebutuhan pengujian & submission.
  *
  * Mengisi 1 akun per role sesuai kewajiban PRD:
  *   - admin  : langsung active, dibuat langsung oleh sistem
  *   - officer: langsung active, registration_source = admin_created (tidak pernah self-register)
  *   - user   : langsung active (untuk demo); di production, user nyata akan melalui pending
- *
- * Mengisi data fasilitas demo:
- *   - 3 tipe fasilitas (Laboratorium, Ruang Kelas, Aula)
- *   - 4 lokasi (Gedung A Lt.1, Gedung A Lt.2, Gedung B Lt.1, Gedung C Lt.1)
- *   - 6 fasilitas dengan berbagai status (active, inactive, maintenance)
  *
  * Jalankan: php artisan db:seed
  * Atau reset: php artisan migrate:fresh --seed
@@ -108,48 +100,5 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // =====================================================================
-        // 5. Tipe Fasilitas (Modul Facility Management – Orang 2)
-        // =====================================================================
-        $typeLab = FacilityType::firstOrCreate(
-            ['name' => 'Laboratorium'],
-            ['description' => 'Ruang laboratorium untuk praktikum dan penelitian']
-        );
-
-        $typeKelas = FacilityType::firstOrCreate(
-            ['name' => 'Ruang Kelas'],
-            ['description' => 'Ruang kelas untuk perkuliahan dan seminar']
-        );
-
-        $typeAula = FacilityType::firstOrCreate(
-            ['name' => 'Aula'],
-            ['description' => 'Ruang aula untuk acara besar dan kegiatan kemahasiswaan']
-        );
-
-        // =====================================================================
-        // 6. Lokasi
-        // =====================================================================
-        $locA1 = Location::firstOrCreate(
-            ['name' => 'Lab Komputer Lt. 1'],
-            ['building' => 'Gedung A', 'floor' => '1']
-        );
-
-        $locA2 = Location::firstOrCreate(
-            ['name' => 'Ruang Kelas Lt. 2'],
-            ['building' => 'Gedung B', 'floor' => '2']
-        );
-
-        $locB1 = Location::firstOrCreate(
-            ['name' => 'Lab Jaringan Lt. 1'],
-            ['building' => 'Gedung C', 'floor' => '1']
-        );
-
-        $locC1 = Location::firstOrCreate(
-            ['name' => 'Aula Utama Lt. 1'],
-            ['building' => 'Gedung D', 'floor' => '1']
-        );
-
-        // Fasilitas sengaja tidak di-seed agar katalog dimulai dalam keadaan kosong.
-        $this->command->info('✓ Katalog fasilitas dikosongkan. Tambahkan fasilitas melalui CRUD Admin.');
     }
 }

@@ -1598,13 +1598,13 @@ Karakter antarmuka:
 Font utama:
 
 ```text
-Figtree
+Plus Jakarta Sans
 ```
 
 Fallback:
 
 ```css
-font-family: 'Figtree', ui-sans-serif, system-ui, -apple-system,
+font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system,
              BlinkMacSystemFont, "Segoe UI", sans-serif;
 ```
 
@@ -1721,7 +1721,7 @@ Tambahkan ke `resources/css/app.css`:
 
 ```css
 :root {
-    --font-sans: 'Figtree', ui-sans-serif, system-ui, -apple-system,
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system,
                  BlinkMacSystemFont, "Segoe UI", sans-serif;
 
     --blue-50: #EFF6FF;

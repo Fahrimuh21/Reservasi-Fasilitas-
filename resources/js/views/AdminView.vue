@@ -3,7 +3,8 @@
 import {
     ref,
     computed,
-    onMounted
+    onMounted,
+    onUnmounted
 } from "vue";
 
 import axios from "axios";
@@ -201,6 +202,7 @@ const facilities = ref([]);
 const types = ref([]);
 
 const locations = ref([]);
+let facilitiesTimer;
 
 
 const modal = ref(false);
@@ -235,6 +237,23 @@ description:"",
 status:"active"
 
 });
+
+function statusLabel(status){
+    return {
+        active:"Aktif",
+        inactive:"Tidak aktif",
+        maintenance:"Pemeliharaan",
+        pending:"Menunggu persetujuan"
+    }[status] || status;
+}
+
+function facilityLocation(facility){
+    return [
+        facility.location?.name,
+        facility.location?.building,
+        facility.location?.floor ? `Lantai ${facility.location.floor}` : null,
+    ].filter(Boolean).join(" · ");
+}
 
 
 
@@ -331,8 +350,12 @@ loadFacilities();
 
 loadMaster();
 
+facilitiesTimer = window.setInterval(loadFacilities, 15000);
+
 
 });
+
+onUnmounted(()=>window.clearInterval(facilitiesTimer));
 
 
 
@@ -627,6 +650,10 @@ Analytics Center
 <span class="sun">
 ✦
 </span>
+
+<small>
+{{f.type?.name || "Tipe tidak tersedia"}} · {{facilityLocation(f)}}
+</small>
 
 </h1>
 
@@ -972,7 +999,7 @@ class="facility-row"
 
 <span>
 
-{{f.capacity}} User
+{{f.capacity}} orang
 
 </span>
 
@@ -984,7 +1011,7 @@ class="facility-row"
 
 >
 
-{{f.status}}
+{{statusLabel(f.status)}}
 
 </b>
 
@@ -1009,9 +1036,11 @@ Edit
 
 @click="toggleStatus(f)"
 
+:disabled="f.status === 'maintenance'"
+
 >
 
-Toggle
+{{f.status === 'maintenance' ? 'Petugas' : 'Toggle'}}
 
 </button>
 

@@ -32,10 +32,7 @@ class FacilityResource extends JsonResource
                 ? new LocationResource($this->location)
                 : optional($this->location)->building,
             'capacity'    => $this->capacity,
-            'description' => $this->when(
-                $request->routeIs('*show*') || $request->is('*/facilities/*'),
-                $this->description
-            ),
+            'description' => $this->description,
             'status'      => $this->status,
             'availability_today' => $this->when(
                 isset($this->availability_today),
