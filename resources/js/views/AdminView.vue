@@ -651,9 +651,6 @@ Analytics Center
 ✦
 </span>
 
-<small>
-{{f.type?.name || "Tipe tidak tersedia"}} · {{facilityLocation(f)}}
-</small>
 
 </h1>
 
