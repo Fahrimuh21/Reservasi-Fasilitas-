@@ -433,10 +433,6 @@ selectedType=t.value
 
 
 </button>
-
-
-
-v-if="hasRole('user')"
 </div>
 
 
@@ -1086,7 +1082,7 @@ display:block;
 font-size:11px;
 
 
-color:#94a3b8;
+color:#64748b;
 
 
 }

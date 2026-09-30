@@ -19,6 +19,7 @@ config(['database.default' => 'sqlite', 'database.connections.sqlite.database' =
 Artisan::call('migrate', ['--force' => true]);
 $user = User::factory()->create(['name' => 'Pengguna Uji', 'email' => 'browser-user@example.test']);
 $officer = User::factory()->officer()->create(['name' => 'Petugas Uji', 'email' => 'browser-officer@example.test']);
+$admin = User::factory()->admin()->create(['name' => 'Administrator Uji', 'email' => 'browser-admin@example.test']);
 $type = DB::table('facility_types')->insertGetId(['name' => 'Ruang Rapat']);
 $location = DB::table('locations')->insertGetId(['name' => 'Ruang 1', 'building' => 'Gedung A', 'floor' => '1']);
 $facility = Facility::create([

@@ -4,6 +4,7 @@ import {
   ref,
   computed,
   watch,
+  nextTick,
   onMounted,
   onUnmounted
 } from 'vue'
@@ -19,6 +20,8 @@ import mascotImage from '../../asset/Makot.png'
 import {
   useLiveCollection
 } from '../composables/useLiveCollection'
+
+import BrandLogo from '../components/BrandLogo.vue'
 
 
 import {
@@ -56,6 +59,9 @@ STATE
 
 
 const mobileMenuOpen = ref(false)
+const mobileMenuButton = ref(null)
+const mobileMenuPanel = ref(null)
+const activeSection = ref('beranda')
 
 const isScrolled = ref(false)
 
@@ -783,10 +789,26 @@ NAVIGATION
 ========================= */
 
 
+const closeMobileMenu = (restoreFocus = true)=>{
+  if(!mobileMenuOpen.value) return
+  mobileMenuOpen.value = false
+  document.body.classList.remove('landing-menu-open')
+  if(restoreFocus) nextTick(() => mobileMenuButton.value?.focus())
+}
+
+const openMobileMenu = ()=>{
+  mobileMenuOpen.value = true
+  document.body.classList.add('landing-menu-open')
+  nextTick(() => mobileMenuPanel.value?.querySelector('button, a')?.focus())
+}
+
+const toggleMobileMenu = ()=> mobileMenuOpen.value ? closeMobileMenu() : openMobileMenu()
+
 const scrollToSection = (id)=>{
 
 
-mobileMenuOpen.value=false
+closeMobileMenu(false)
+activeSection.value = id
 
 
 
@@ -834,6 +856,36 @@ const handleScroll = ()=>{
 isScrolled.value =
 window.scrollY > 50
 
+const sectionIds = ['beranda', 'fasilitas', 'ketersediaan']
+const current = sectionIds.findLast(id => {
+  const section = document.getElementById(id)
+  return section && section.getBoundingClientRect().top <= 130
+})
+activeSection.value = current || 'beranda'
+
+}
+
+const handleResize = ()=>{
+  if(window.innerWidth > 840){
+    mobileMenuOpen.value = false
+    document.body.classList.remove('landing-menu-open')
+  }
+}
+
+const handleMenuKeydown = event=>{
+  if(event.key === 'Escape' && mobileMenuOpen.value){
+    event.preventDefault()
+    closeMobileMenu()
+    return
+  }
+
+  if(event.key !== 'Tab' || !mobileMenuOpen.value || !mobileMenuPanel.value) return
+  const focusable = [...mobileMenuPanel.value.querySelectorAll('a[href], button:not([disabled])')]
+  if(!focusable.length) return
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if(event.shiftKey && document.activeElement === first){ event.preventDefault(); last.focus() }
+  else if(!event.shiftKey && document.activeElement === last){ event.preventDefault(); first.focus() }
 }
 
 
@@ -843,7 +895,7 @@ window.scrollY > 50
 onMounted(()=>{
 
 
-window.addEventListener(
+  window.addEventListener(
 
 'scroll',
 
@@ -853,7 +905,11 @@ handleScroll,
 passive:true
 }
 
-)
+  )
+
+  window.addEventListener('resize', handleResize)
+  window.addEventListener('keydown', handleMenuKeydown)
+  handleScroll()
 
 
 
@@ -930,6 +986,10 @@ handleScroll
 
 )
 
+window.removeEventListener('resize', handleResize)
+window.removeEventListener('keydown', handleMenuKeydown)
+document.body.classList.remove('landing-menu-open')
+
 
 
 if(observer){
@@ -947,19 +1007,30 @@ observer.disconnect()
 
 <template>
   <div class="landing-root">
-    <header class="landing-header">
+    <header class="landing-header" :class="{ 'is-scrolled': isScrolled }">
       <nav class="landing-nav" aria-label="Navigasi utama">
-        <RouterLink :to="{ name: 'landing' }" class="brand-mark">RUANGKITA</RouterLink>
+        <RouterLink :to="{ name: 'landing' }" class="brand-mark" aria-label="RuangKita, halaman utama"><BrandLogo :size="38" /></RouterLink>
         <div class="landing-links">
-          <a href="#beranda" @click.prevent="scrollToSection('beranda')">Beranda</a>
-          <a href="#fasilitas" @click.prevent="scrollToSection('fasilitas')">Fasilitas</a>
-          <a href="#ketersediaan" @click.prevent="scrollToSection('ketersediaan')">Ketersediaan</a>
+          <a href="#beranda" :class="{ active: activeSection === 'beranda' }" :aria-current="activeSection === 'beranda' ? 'page' : undefined" @click.prevent="scrollToSection('beranda')">Beranda</a>
+          <a href="#fasilitas" :class="{ active: activeSection === 'fasilitas' }" :aria-current="activeSection === 'fasilitas' ? 'page' : undefined" @click.prevent="scrollToSection('fasilitas')">Fasilitas</a>
+          <a href="#ketersediaan" :class="{ active: activeSection === 'ketersediaan' }" :aria-current="activeSection === 'ketersediaan' ? 'page' : undefined" @click.prevent="scrollToSection('ketersediaan')">Ketersediaan</a>
         </div>
         <div class="landing-actions">
           <RouterLink :to="{ name: 'login' }" class="link-button">Masuk</RouterLink>
           <RouterLink :to="{ name: 'register' }" class="primary-button">Daftar</RouterLink>
         </div>
+        <button ref="mobileMenuButton" type="button" class="menu-button" aria-label="Buka menu navigasi" aria-controls="landing-mobile-menu" :aria-expanded="mobileMenuOpen" @click="toggleMobileMenu"><Menu :size="21" /></button>
       </nav>
+      <button v-if="mobileMenuOpen" type="button" class="mobile-nav-overlay" aria-label="Tutup menu navigasi" @click="closeMobileMenu()"></button>
+      <aside v-if="mobileMenuOpen" id="landing-mobile-menu" ref="mobileMenuPanel" class="mobile-nav" role="dialog" aria-modal="true" aria-label="Menu navigasi">
+        <div class="mobile-nav__head"><BrandLogo :size="38" /><button type="button" aria-label="Tutup menu navigasi" @click="closeMobileMenu()"><X :size="21" /></button></div>
+        <nav aria-label="Navigasi mobile">
+          <a href="#beranda" :class="{ active: activeSection === 'beranda' }" :aria-current="activeSection === 'beranda' ? 'page' : undefined" @click.prevent="scrollToSection('beranda')">Beranda</a>
+          <a href="#fasilitas" :class="{ active: activeSection === 'fasilitas' }" :aria-current="activeSection === 'fasilitas' ? 'page' : undefined" @click.prevent="scrollToSection('fasilitas')">Fasilitas</a>
+          <a href="#ketersediaan" :class="{ active: activeSection === 'ketersediaan' }" :aria-current="activeSection === 'ketersediaan' ? 'page' : undefined" @click.prevent="scrollToSection('ketersediaan')">Ketersediaan</a>
+        </nav>
+        <div class="mobile-nav__actions"><RouterLink :to="{ name: 'login' }" class="secondary-button" @click="closeMobileMenu(false)">Masuk</RouterLink><RouterLink :to="{ name: 'register' }" class="primary-button" @click="closeMobileMenu(false)">Daftar</RouterLink></div>
+      </aside>
     </header>
 
     <main>
@@ -1032,7 +1103,7 @@ observer.disconnect()
     <footer class="landing-footer">
       <div class="footer-main">
         <div class="footer-brand">
-          <strong>RUANGKITA</strong>
+          <BrandLogo :size="38" />
           <p>Platform reservasi fasilitas Universitas Diponegoro untuk penggunaan ruang yang lebih tertata.</p>
           <span class="footer-status"><i></i> Sistem operasional</span>
         </div>
@@ -1062,27 +1133,32 @@ observer.disconnect()
 </template>
 
 <style scoped>
-.landing-root { --blue: #2563eb; --blue-dark: #1e40af; --blue-soft: #eff6ff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --surface: #fff; min-height: 100vh; background: #f8fafc; color: var(--ink); font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
+.landing-root { --blue: #2563eb; --blue-dark: #1e40af; --blue-soft: #eff6ff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --surface: #fff; width: 100%; min-width: 0; min-height: 100vh; background: #f8fafc; color: var(--ink); font-family: 'Figtree', ui-sans-serif, system-ui, sans-serif; font-weight: 400; }
+.landing-root, .landing-root * { box-sizing: border-box; }
+:global(body.landing-menu-open) { overflow: hidden; }
 .landing-header { position: sticky; top: 0; z-index: 20; padding: 18px 24px 0; }
-.landing-nav { max-width: 1180px; min-height: 62px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 10px 16px; border: 1px solid #dbeafe; border-radius: 14px; background: rgba(255,255,255,.92); box-shadow: 0 10px 28px rgba(15,23,42,.06); backdrop-filter: blur(14px); }
-.brand-mark { color: var(--blue); font-weight: 800; letter-spacing: .1em; text-decoration: none; }
+.landing-nav { max-width: 1180px; min-height: 64px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 10px 14px; border: 1px solid #dbeafe; border-radius: 14px; background: rgba(255,255,255,.94); box-shadow: 0 10px 28px rgba(15,23,42,.06); backdrop-filter: blur(14px); transition: box-shadow .2s ease; }
+.landing-header.is-scrolled .landing-nav { box-shadow: 0 14px 34px rgba(15,23,42,.12); }
+.brand-mark { flex: 0 1 auto; min-width: 0; color: var(--blue); text-decoration: none; }
 .landing-links, .landing-actions, .hero-actions, .hero-stats { display: flex; align-items: center; gap: 20px; }
-.landing-links a, .link-button, .landing-footer a { color: var(--muted); font-size: 13px; font-weight: 700; text-decoration: none; }
+.landing-links a, .link-button, .landing-footer a { color: var(--muted); font-size: 13px; font-weight: 500; text-decoration: none; }
 .landing-links a:hover, .link-button:hover, .landing-footer a:hover { color: var(--blue); }
-.primary-button, .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 8px; font-weight: 700; text-decoration: none; }
+.landing-links a.active { color: var(--blue); font-weight: 600; }
+.primary-button, .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 8px; font-weight: 600; text-decoration: none; }
 .primary-button { border: 1px solid var(--blue); background: var(--blue); color: #fff; box-shadow: 0 10px 22px rgba(37,99,235,.2); }
 .primary-button:hover { background: var(--blue-dark); }
 .secondary-button { border: 1px solid #bfdbfe; background: #fff; color: var(--blue); }
 .menu-button, .calendar-header button { display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
-.menu-button { width: 40px; height: 40px; }
-.mobile-nav { display: none; }
+.menu-button { display: none; width: 44px; height: 44px; flex: 0 0 44px; }
+.mobile-nav, .mobile-nav-overlay { display: none; }
 .hero-section, .section-block, .availability-section { max-width: 1180px; margin: auto; padding: 96px 24px; }
 .hero-section { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 64px; min-height: 680px; }
 .hero-copy, .hero-visual { animation: rise .65s ease both; }
-.eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .11em; }
+.eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--blue); font-size: 11px; font-weight: 600; letter-spacing: .11em; }
 h1, h2, h3, p { margin-top: 0; }
-h1 { max-width: 600px; margin-bottom: 20px; font-size: clamp(42px, 6vw, 72px); line-height: 1.02; letter-spacing: -.05em; }
-h2 { font-size: clamp(30px, 4vw, 46px); line-height: 1.08; letter-spacing: -.04em; }
+h1 { max-width: 600px; margin-bottom: 20px; font-size: clamp(40px, 5vw, 64px); font-weight: 700; line-height: 1.08; letter-spacing: -.04em; overflow-wrap: normal; word-break: normal; }
+h2 { font-size: clamp(30px, 4vw, 44px); font-weight: 700; line-height: 1.14; letter-spacing: -.035em; }
+.hero-copy > p, .section-heading p, .availability-copy > p, .cta-section p, .footer-brand p { font-weight: 400; }
 .hero-copy > p, .section-heading p, .availability-copy > p, .cta-section p { max-width: 560px; color: var(--muted); line-height: 1.7; }
 .hero-actions { margin-top: 30px; flex-wrap: wrap; }
 .hero-stats { margin-top: 32px; color: var(--muted); font-size: 12px; }
@@ -1090,20 +1166,19 @@ h2 { font-size: clamp(30px, 4vw, 46px); line-height: 1.08; letter-spacing: -.04e
 .hero-visual { position: relative; min-height: 480px; overflow: hidden; border-radius: 18px; box-shadow: 0 24px 60px rgba(15,23,42,.18); }
 .hero-visual > img:first-child { width: 100%; height: 100%; min-height: 480px; object-fit: cover; display: block; }
 .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(15,23,42,.72)); }
-.hero-float { position: absolute; left: 22px; bottom: 22px; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 44px); padding: 13px 16px; border: 1px solid rgba(255,255,255,.5); border-radius: 10px; background: rgba(255,255,255,.92); color: var(--blue); font-size: 12px; font-weight: 800; }
+.hero-float { position: absolute; left: 22px; bottom: 22px; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 44px); padding: 13px 16px; border: 1px solid rgba(255,255,255,.5); border-radius: 10px; background: rgba(255,255,255,.92); color: var(--blue); font-size: 12px; font-weight: 600; }
 .mascot { position: absolute; top: 20px; right: 20px; width: 72px; height: 72px; border: 3px solid #fff; border-radius: 50%; object-fit: cover; }
 .section-block { background: #fff; max-width: none; padding-left: max(24px, calc((100% - 1132px) / 2)); padding-right: max(24px, calc((100% - 1132px) / 2)); }
 .section-heading { margin-bottom: 36px; }
 .facility-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 290px)); justify-content: center; gap: 18px; }
 .facility-card { width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 8px 20px rgba(15,23,42,.05); }
 .facility-banner { position: relative; height: 132px; display: grid; place-items: center; color: #fff; }.facility-banner > span { font-size: 48px; opacity: .5; }.facility-banner b { position: absolute; top: 12px; right: 12px; display: flex; align-items: center; gap: 4px; padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,.9); color: #15803d; font-size: 10px; }
-.facility-body { padding: 18px; }.facility-body h3 { margin-bottom: 13px; font-size: 17px; }.facility-body p { display: flex; align-items: center; gap: 6px; margin: 7px 0; color: var(--muted); font-size: 12px; }.facility-body .availability-label { color: var(--blue); font-weight: 700; }.card-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--blue); font-size: 12px; font-weight: 800; text-decoration: none; }
+.facility-body { padding: 18px; }.facility-body h3 { margin-bottom: 13px; font-size: 17px; font-weight: 600; }.facility-body p { display: flex; align-items: center; gap: 6px; margin: 7px 0; color: var(--muted); font-size: 12px; }.facility-body .availability-label { color: var(--blue); font-weight: 600; }.card-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--blue); font-size: 12px; font-weight: 600; text-decoration: none; }
 .notice { padding: 18px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: #fff; }.notice.error { color: #b91c1c; background: #fef2f2; }
-.availability-section { max-width: none; background: var(--blue-soft); padding-left: max(24px, calc((100% - 1132px) / 2)); padding-right: max(24px, calc((100% - 1132px) / 2)); }.availability-panel { display: grid; grid-template-columns: .9fr 1.1fr; gap: 56px; align-items: center; }.calendar-panel { padding: 22px; border: 1px solid #dbeafe; border-radius: 14px; background: #fff; }.calendar-header, .calendar-days, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; align-items: center; text-align: center; }.calendar-header { grid-template-columns: 38px 1fr 38px; margin-bottom: 22px; }.calendar-header button { width: 34px; height: 34px; }.calendar-days { margin-bottom: 8px; color: #94a3b8; font-size: 11px; font-weight: 700; }.calendar-grid span { display: grid; place-items: center; aspect-ratio: 1; border-radius: 7px; color: var(--muted); font-size: 12px; }.calendar-grid .available { background: #dcfce7; color: #15803d; }.calendar-grid .booked { background: #fee2e2; color: #b91c1c; }.calendar-grid .today { outline: 2px solid var(--blue); outline-offset: 2px; }.legend { display: flex; gap: 16px; margin-top: 20px; color: var(--muted); font-size: 11px; }.dot { width: 8px; height: 8px; display: inline-block; margin-right: 4px; border-radius: 50%; background: #dcfce7; }.dot.booked { background: #fee2e2; }.availability-copy label { display: grid; gap: 8px; max-width: 430px; margin: 24px 0 10px; color: var(--ink); font-size: 12px; font-weight: 800; }.availability-copy select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; }.sync-status { color: #15803d !important; font-size: 12px; font-weight: 700; }.time-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }.time-slot { display: flex; align-items: center; gap: 7px; padding: 10px; border-radius: 7px; background: #fff; color: var(--muted); font-size: 11px; }.time-slot b { margin-left: auto; font-size: 10px; }.time-slot.available b { color: #15803d; }.time-slot.booked b { color: #b91c1c; }
+.availability-section { max-width: none; background: var(--blue-soft); padding-left: max(24px, calc((100% - 1132px) / 2)); padding-right: max(24px, calc((100% - 1132px) / 2)); }.availability-panel { display: grid; grid-template-columns: .9fr 1.1fr; gap: 56px; align-items: center; }.calendar-panel { padding: 22px; border: 1px solid #dbeafe; border-radius: 14px; background: #fff; }.calendar-header, .calendar-days, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; align-items: center; text-align: center; }.calendar-header { grid-template-columns: 38px 1fr 38px; margin-bottom: 22px; }.calendar-header button { width: 34px; height: 34px; }.calendar-days { margin-bottom: 8px; color: #64748b; font-size: 11px; font-weight: 600; }.calendar-grid span { display: grid; place-items: center; aspect-ratio: 1; border-radius: 7px; color: var(--muted); font-size: 12px; }.calendar-grid .available { background: #dcfce7; color: #15803d; }.calendar-grid .booked { background: #fee2e2; color: #b91c1c; }.calendar-grid .today { outline: 2px solid var(--blue); outline-offset: 2px; }.legend { display: flex; gap: 16px; margin-top: 20px; color: var(--muted); font-size: 11px; }.dot { width: 8px; height: 8px; display: inline-block; margin-right: 4px; border-radius: 50%; background: #dcfce7; }.dot.booked { background: #fee2e2; }.availability-copy label { display: grid; gap: 8px; max-width: 430px; margin: 24px 0 10px; color: var(--ink); font-size: 12px; font-weight: 600; }.availability-copy select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; }.sync-status { color: #15803d !important; font-size: 12px; font-weight: 600; }.time-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }.time-slot { display: flex; align-items: center; gap: 7px; padding: 10px; border-radius: 7px; background: #fff; color: var(--muted); font-size: 11px; }.time-slot b { margin-left: auto; font-size: 10px; }.time-slot.available b { color: #15803d; }.time-slot.booked b { color: #b91c1c; }
 .cta-section { padding: 82px 24px; text-align: center; background: var(--blue); color: #fff; }.cta-section h2 { margin: 15px auto; color: #fff; }.cta-section p { margin: 0 auto 26px; color: #dbeafe; }.cta-section .primary-button { background: #fff; color: var(--blue); }
 .landing-footer { padding: 58px max(24px, calc((100% - 1132px) / 2)) 24px; background: #fff; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .footer-main { display: grid; grid-template-columns: 1.6fr repeat(3, 1fr); gap: 48px; padding-bottom: 44px; }
-.footer-brand strong { color: var(--blue); letter-spacing: .1em; font-size: 18px; }
 .footer-brand p { max-width: 270px; margin: 16px 0; color: var(--muted); line-height: 1.7; }
 .footer-status { display: inline-flex; align-items: center; gap: 7px; color: #15803d; font-size: 11px; font-weight: 700; }
 .footer-status i { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 4px #dcfce7; }
@@ -1111,8 +1186,22 @@ h2 { font-size: clamp(30px, 4vw, 46px); line-height: 1.08; letter-spacing: -.04e
 .footer-column h3 { margin: 2px 0 8px; color: var(--ink); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
 .footer-column a, .footer-column span { color: var(--muted); font-size: 12px; text-decoration: none; }
 .footer-column a:hover { color: var(--blue); }
-.footer-bottom { display: flex; justify-content: space-between; gap: 16px; padding-top: 20px; border-top: 1px solid var(--line); color: #94a3b8; font-size: 11px; }
+.footer-bottom { display: flex; justify-content: space-between; gap: 16px; padding-top: 20px; border-top: 1px solid var(--line); color: #64748b; font-size: 11px; }
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 900px) { .landing-links, .landing-actions { display: flex; gap: 10px; }.hero-section, .availability-panel { grid-template-columns: 1fr; gap: 36px; }.hero-section { padding-top: 72px; }.hero-visual { min-height: 360px; }.hero-visual > img:first-child { min-height: 360px; }.facility-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 290px)); } }
-@media (max-width: 560px) { .landing-header { padding: 10px 12px 0; }.hero-section, .section-block, .availability-section { padding: 64px 18px; }.hero-section { min-height: auto; }.hero-stats { gap: 12px; flex-wrap: wrap; }.facility-grid, .time-slots { grid-template-columns: 1fr; }.footer-main { grid-template-columns: 1fr 1fr; gap: 30px 20px; }.footer-brand { grid-column: 1 / -1; }.footer-bottom { flex-direction: column; gap: 8px; }.hero-visual, .hero-visual > img:first-child { min-height: 300px; } }
+@media (max-width: 900px) { .hero-section, .availability-panel { grid-template-columns: 1fr; gap: 36px; }.hero-section { padding-top: 72px; }.hero-visual { min-height: 360px; }.hero-visual > img:first-child { min-height: 360px; }.facility-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 290px)); }.footer-main { grid-template-columns: 1.4fr repeat(2, 1fr); }.footer-contact { grid-column: 2 / -1; } }
+@media (max-width: 840px) {
+  .landing-links, .landing-actions { display: none; }
+  .menu-button { display: grid; place-items: center; }
+  .mobile-nav-overlay { position: fixed; inset: 0; z-index: 30; display: block; width: 100%; height: 100%; padding: 0; border: 0; background: rgba(15,23,42,.48); }
+  .mobile-nav { position: fixed; inset: 0 0 0 auto; z-index: 31; display: flex; width: min(340px, calc(100vw - 32px)); flex-direction: column; gap: 28px; padding: 20px; background: #fff; box-shadow: -20px 0 50px rgba(15,23,42,.18); }
+  .mobile-nav__head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .mobile-nav__head button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+  .mobile-nav nav { display: grid; gap: 8px; }
+  .mobile-nav nav a { min-height: 48px; display: flex; align-items: center; padding: 0 14px; border-radius: 8px; color: var(--muted); font-size: 15px; font-weight: 500; text-decoration: none; }
+  .mobile-nav nav a:hover, .mobile-nav nav a.active { background: var(--blue-soft); color: var(--blue-dark); font-weight: 600; }
+  .mobile-nav__actions { display: grid; gap: 10px; margin-top: auto; }
+  .mobile-nav__actions > * { width: 100%; }
+}
+@media (max-width: 560px) { .landing-header { padding: 8px 10px 0; }.landing-nav { min-height: 60px; padding: 7px 10px; }.hero-section, .section-block, .availability-section { padding: 56px 16px; }.hero-section { min-height: auto; padding-top: 52px; }.hero-copy h1 { font-size: clamp(34px, 11vw, 42px); line-height: 1.1; letter-spacing: -.035em; }.hero-copy > p { font-size: 15px; line-height: 1.65; }.hero-actions { align-items: stretch; gap: 10px; }.hero-actions > * { flex: 1 1 100%; }.hero-stats { gap: 12px; flex-wrap: wrap; }.facility-grid, .time-slots { grid-template-columns: 1fr; }.calendar-panel { padding: 16px 12px; }.calendar-header, .calendar-days, .calendar-grid { gap: 4px; }.footer-main { grid-template-columns: 1fr 1fr; gap: 30px 20px; }.footer-brand { grid-column: 1 / -1; }.footer-contact { grid-column: auto; }.footer-bottom { flex-direction: column; gap: 8px; }.hero-visual, .hero-visual > img:first-child { min-height: 280px; } }
+@media (max-width: 380px) { .landing-footer { padding-inline: 16px; }.footer-main { grid-template-columns: 1fr; }.footer-brand, .footer-contact { grid-column: auto; }.time-slot { min-width: 0; flex-wrap: wrap; }.time-slot b { margin-left: 21px; }.hero-stats span { flex: 1 1 120px; } }
 </style>

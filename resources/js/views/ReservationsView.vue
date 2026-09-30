@@ -23,8 +23,16 @@ const reason = ref('');
 const slots = ref([]);
 const slotError = ref('');
 const slotsLoading = ref(false);
-const form = ref({ facility_id: route.query.facility_id || '', start_time: '09:00', end_time: '10:00', purpose: '' });
+const slotSelectionStage = ref('start');
+const form = ref({ facility_id: route.query.facility_id || '', start_time: '', end_time: '', purpose: '' });
 const selectedFacility = computed(() => facilities.value.find(item => String(item.id) === String(form.value.facility_id)));
+const slotChoices = computed(() => {
+    if (!slots.value.length) return [];
+    const last = slots.value.at(-1);
+    return last?.end && last.end !== last.start
+        ? [...slots.value, { start: last.end, end: last.end, status: 'boundary', terminal: true }]
+        : slots.value;
+});
 const filtered = computed(() => reservations.value.filter(item =>
     (filter.value === 'all' || item.status === filter.value) &&
     [item.facility?.name, item.purpose, String(item.id)].some(value => value?.toLowerCase().includes(search.value.toLowerCase()))
@@ -38,11 +46,80 @@ const filters = [{ value: 'all', label: 'Semua' }, { value: 'pending', label: 'M
 let slotController;
 let timer;
 
-function selectSlot(start) {
-    form.value.start_time = start;
-    const [hour, minute] = start.split(':').map(Number);
-    const end = Math.min(hour * 60 + minute + 60, 1200);
-    form.value.end_time = `${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`;
+const slotSelectionHint = computed(() => {
+    if (slotSelectionStage.value === 'end') return `Waktu mulai ${form.value.start_time} dipilih. Pilih slot terakhir untuk menentukan waktu selesai.`;
+    if (form.value.start_time && form.value.end_time) return `Rentang ${form.value.start_time}–${form.value.end_time} dipilih. Klik salah satu batas untuk membatalkan.`;
+    return 'Klik sekali untuk waktu mulai, lalu klik slot terakhir untuk waktu selesai.';
+});
+
+function clearSlotSelection() {
+    form.value.start_time = '';
+    form.value.end_time = '';
+    slotSelectionStage.value = 'start';
+    formError.value = '';
+}
+
+function isSlotSelected(slot) {
+    if (!form.value.start_time) return false;
+    if (!form.value.end_time) return slot.start === form.value.start_time;
+    return slot.start >= form.value.start_time && slot.start <= form.value.end_time;
+}
+
+function isSelectionBoundary(slot) {
+    if (slot.start === form.value.start_time) return true;
+    return !!form.value.end_time && slot.start === form.value.end_time;
+}
+
+function isSlotDisabled(slot) {
+    if (slotSelectionStage.value === 'end' && form.value.start_time) {
+        if (slot.start === form.value.start_time) return false;
+        if (slot.start < form.value.start_time) return slot.status !== 'tersedia';
+        const range = slots.value.filter(item => item.start >= form.value.start_time && item.start < slot.start);
+        return !range.length || range.some(item => item.status !== 'tersedia');
+    }
+    if (slotSelectionStage.value === 'complete' && isSelectionBoundary(slot)) return false;
+    return slot.terminal || slot.status !== 'tersedia';
+}
+
+function selectSlot(slot) {
+    const start = slot.start;
+    formError.value = '';
+
+    if (slotSelectionStage.value === 'end' && start === form.value.start_time) {
+        clearSlotSelection();
+        return;
+    }
+
+    if (slotSelectionStage.value === 'complete' && isSelectionBoundary(slot)) {
+        clearSlotSelection();
+        return;
+    }
+
+    if (slotSelectionStage.value !== 'end' || !form.value.start_time) {
+        form.value.start_time = start;
+        form.value.end_time = '';
+        slotSelectionStage.value = 'end';
+        return;
+    }
+
+    if (start < form.value.start_time) {
+        form.value.start_time = start;
+        form.value.end_time = '';
+        return;
+    }
+
+    const range = slots.value.filter(item => item.start >= form.value.start_time && item.start < start);
+    if (!range.length || range.some(item => item.status !== 'tersedia')) {
+        formError.value = 'Rentang waktu melewati slot yang tidak tersedia. Pilih rentang lain.';
+        return;
+    }
+
+    form.value.end_time = start;
+    slotSelectionStage.value = 'complete';
+}
+
+function handleManualTimeChange() {
+    slotSelectionStage.value = form.value.start_time && form.value.end_time ? 'complete' : form.value.start_time ? 'end' : 'start';
 }
 
 function openBooking() {
@@ -89,7 +166,10 @@ watch(facilities, items => {
     if (!form.value.facility_id && items.length) form.value.facility_id = items[0].id;
 });
 onMounted(() => {
-    if (typeof route.query.slot === 'string' && /^([01]\d):[03]0$/.test(route.query.slot)) selectSlot(route.query.slot);
+    if (typeof route.query.slot === 'string' && /^([01]\d):[03]0$/.test(route.query.slot)) {
+        form.value.start_time = route.query.slot;
+        slotSelectionStage.value = 'end';
+    }
     if (route.query.facility_id) openBooking();
     timer = window.setInterval(() => {
         if (showModal.value && !document.hidden && !slotsLoading.value) loadSlots();
@@ -117,6 +197,7 @@ async function createReservation() {
         });
         showModal.value = false;
         form.value.purpose = '';
+        clearSlotSelection();
         filter.value = 'pending';
         search.value = '';
         notice.value = `Reservasi REQ-${String(response.data.data.id).padStart(4, '0')} tersimpan. Menunggu konfirmasi petugas.`;
@@ -191,19 +272,20 @@ async function cancelReservation() {
                 </footer>
             </article>
         </div>
-        <WorkflowDialog v-if="showModal" title="Reservasi baru" :busy="saving" :disabled="!selectedFacility || !!slotError || !slots.length" submit-label="Ajukan reservasi" @close="showModal = false" @submit="createReservation">
+        <WorkflowDialog v-if="showModal" title="Reservasi baru" :busy="saving" :disabled="!selectedFacility || !!slotError || !slots.length || !form.start_time || !form.end_time" submit-label="Ajukan reservasi" @close="showModal = false" @submit="createReservation">
             <p v-if="facilityError" class="wf-notice wf-error" role="alert">{{ facilityError }}</p>
             <label>Fasilitas<select v-model="form.facility_id" aria-label="Fasilitas" required autofocus><option value="" disabled>Pilih fasilitas</option><option v-for="facility in facilities" :key="facility.id" :value="facility.id">{{ facility.name }}</option></select></label>
             <label>Tanggal<input v-model="selectedDate" type="date" :min="campusToday()" required /></label>
             <div class="wf-field-pair">
-                <label>Mulai (WIB)<input v-model="form.start_time" type="time" min="07:00" max="19:30" step="1800" required /></label>
-                <label>Selesai (WIB)<input v-model="form.end_time" type="time" min="07:30" max="20:00" step="1800" required /></label>
+                <label>Mulai (WIB)<input v-model="form.start_time" type="time" min="07:00" max="19:30" step="1800" required @change="handleManualTimeChange" /></label>
+                <label>Selesai (WIB)<input v-model="form.end_time" type="time" min="07:30" max="20:00" step="1800" required @change="handleManualTimeChange" /></label>
             </div>
             <div>
                 <h3 class="wf-reference">Ketersediaan jadwal</h3>
+                <p class="wf-slot-helper" role="status">{{ slotSelectionHint }}</p>
                 <p v-if="slotError" class="wf-notice wf-error" role="alert">{{ slotError }}</p>
                 <p v-else-if="slotsLoading && !slots.length" class="wf-reference" role="status">Memuat jadwal...</p>
-                <div class="wf-slots" aria-label="Slot jadwal"><button v-for="slot in slots" :key="slot.start" type="button" :disabled="slot.status !== 'tersedia'" :aria-pressed="form.start_time === slot.start" :title="slot.status === 'tersedia' ? 'Tersedia' : 'Tidak tersedia'" @click="selectSlot(slot.start)">{{ slot.start }}</button></div>
+                <div class="wf-slots" aria-label="Slot jadwal"><button v-for="slot in slotChoices" :key="slot.start" type="button" :disabled="isSlotDisabled(slot)" :aria-pressed="isSlotSelected(slot)" :class="{ 'is-range': isSlotSelected(slot), 'is-boundary': isSelectionBoundary(slot), 'is-terminal': slot.terminal }" :title="isSlotSelected(slot) ? 'Dipilih — klik lagi untuk membatalkan' : isSlotDisabled(slot) ? 'Tidak tersedia' : slotSelectionStage === 'end' ? 'Pilih sebagai waktu selesai' : 'Pilih sebagai waktu mulai'" @click="selectSlot(slot)">{{ slot.start }}</button></div>
             </div>
             <label>Keperluan<textarea v-model="form.purpose" rows="3" maxlength="1000" required /></label>
             <p v-if="formError" class="wf-notice wf-error" role="alert">{{ formError }}</p>
