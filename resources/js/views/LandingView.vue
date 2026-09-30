@@ -1,457 +1,1118 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { RouterLink } from 'vue-router';
-import { CalendarPlus, Building2, Sparkles, Bell, Clock } from 'lucide-vue-next';
 
-const currentTime = ref('');
-const currentDate = ref('');
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted
+} from 'vue'
 
-let timer;
-const updateTime = () => {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  currentTime.value = `${hours}:${minutes}`;
-  
-  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
-  currentDate.value = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
-};
 
-onMounted(() => {
-  updateTime();
-  timer = setInterval(updateTime, 10000);
-});
+import { RouterLink } from 'vue-router'
 
-onUnmounted(() => {
-  clearInterval(timer);
-});
+
+import campusImage from '../../asset/Undip.png'
+import mascotImage from '../../asset/Makot.png'
+
+
+import {
+  useLiveCollection
+} from '../composables/useLiveCollection'
+
+
+import {
+
+  Search,
+  CalendarCheck,
+  ShieldCheck,
+  Building2,
+  MapPin,
+  Users,
+  CheckCircle,
+  CalendarDays,
+  Clock,
+  ArrowRight,
+  Menu,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Mail,
+  Phone,
+  Globe,
+  Sparkles,
+  MousePointerClick,
+  FileText,
+  Send,
+  Eye
+
+} from 'lucide-vue-next'
+
+
+
+/* =========================
+STATE
+========================= */
+
+
+const mobileMenuOpen = ref(false)
+
+const isScrolled = ref(false)
+
+const visibleSections = ref(new Set())
+
+let observer
+
+
+
+/* =========================
+FACILITY DATA
+========================= */
+
+
+const currentCalendarMonth = ref(
+  new Date().getMonth()
+)
+
+
+const currentCalendarYear = ref(
+  new Date().getFullYear()
+)
+
+
+const selectedFacilityId = ref(null)
+
+
+
+const {
+
+  items: liveFacilities,
+
+  loading: facilitiesLoading,
+
+  error: facilitiesError,
+
+  updatedAt: facilitiesUpdatedAt
+
+} = useLiveCollection(
+  '/api/facilities?per_page=100',
+  3000
+)
+
+
+
+
+/* =========================
+CALENDAR
+========================= */
+
+
+const monthNames = [
+
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember'
+
+]
+
+
+const dayLabels = [
+
+  'Min',
+  'Sen',
+  'Sel',
+  'Rab',
+  'Kam',
+  'Jum',
+  'Sab'
+
+]
+
+
+
+
+const selectedFacility = computed(()=>{
+
+
+  return (
+
+    liveFacilities.value.find(
+
+      facility =>
+      String(facility.id)
+      ===
+      String(selectedFacilityId.value)
+
+    )
+
+    ||
+
+    liveFacilities.value[0]
+
+    ||
+
+    null
+
+  )
+
+
+})
+
+
+
+
+
+const calendarDays = computed(()=>{
+
+
+  const year =
+  currentCalendarYear.value
+
+
+  const month =
+  currentCalendarMonth.value
+
+
+  const firstDay =
+  new Date(
+    year,
+    month,
+    1
+  ).getDay()
+
+
+
+  const daysInMonth =
+  new Date(
+    year,
+    month + 1,
+    0
+  ).getDate()
+
+
+
+  const days=[]
+
+
+
+  for(
+    let i=0;
+    i<firstDay;
+    i++
+  ){
+
+    days.push({
+
+      day:'',
+      empty:true
+
+    })
+
+  }
+
+
+
+  const today =
+  new Date()
+
+
+
+  const slots =
+  selectedFacility.value
+  ?.availability_today
+  ||
+  []
+
+
+
+  const hasAvailable =
+  slots.some(
+    slot =>
+    slot.status === 'tersedia'
+  )
+
+
+
+  const hasBooked =
+  slots.some(
+    slot =>
+    slot.status === 'terisi'
+  )
+
+
+
+
+  for(
+    let d=1;
+    d<=daysInMonth;
+    d++
+  ){
+
+
+    days.push({
+
+      day:d,
+
+      empty:false,
+
+
+      today:
+
+      d === today.getDate()
+      &&
+      month === today.getMonth()
+      &&
+      year === today.getFullYear(),
+
+
+
+      available:
+
+      d === today.getDate()
+      &&
+      hasAvailable,
+
+
+
+      booked:
+
+      d === today.getDate()
+      &&
+      hasBooked
+      &&
+      !hasAvailable
+
+
+    })
+
+
+  }
+
+
+
+  return days
+
+
+})
+
+
+
+
+
+const prevMonth = ()=>{
+
+
+  if(
+    currentCalendarMonth.value === 0
+  ){
+
+    currentCalendarMonth.value = 11
+
+    currentCalendarYear.value--
+
+  }
+
+  else{
+
+    currentCalendarMonth.value--
+
+  }
+
+
+}
+
+
+
+
+const nextMonth = ()=>{
+
+
+  if(
+    currentCalendarMonth.value === 11
+  ){
+
+    currentCalendarMonth.value = 0
+
+    currentCalendarYear.value++
+
+  }
+
+  else{
+
+    currentCalendarMonth.value++
+
+  }
+
+
+}
+
+
+
+
+
+
+/* =========================
+TIME SLOT
+========================= */
+
+
+const timeSlots = computed(()=>{
+
+
+  return (
+
+    selectedFacility.value
+    ?.availability_today
+    ||
+    []
+
+  ).map(slot=>({
+
+
+    time:
+
+    `${slot.start} - ${slot.end}`,
+
+
+    status:
+
+    slot.status === 'tersedia'
+
+    ?
+
+    'available'
+
+    :
+
+    'booked'
+
+
+  }))
+
+
+})
+
+
+
+
+
+
+watch(
+
+  liveFacilities,
+
+  items=>{
+
+
+    if(
+
+      !selectedFacilityId.value
+
+      &&
+
+      items.length
+
+    ){
+
+      selectedFacilityId.value =
+      items[0].id
+
+    }
+
+
+  },
+
+  {
+    immediate:true
+  }
+
+)
+
+
+
+
+
+
+const facilityAvailabilityText =
+computed(()=>{
+
+
+  if(facilitiesLoading.value)
+
+  return 'Memuat data ketersediaan...'
+
+
+
+  if(facilitiesError.value)
+
+  return facilitiesError.value
+
+
+
+  if(!selectedFacility.value)
+
+  return 'Belum ada fasilitas aktif.'
+
+
+
+  return (
+
+    timeSlots.value.filter(
+
+      slot =>
+      slot.status === 'available'
+
+    ).length
+
+    +
+
+    ' slot tersedia hari ini'
+
+  )
+
+
+})
+
+
+
+
+
+
+
+/* =========================
+FACILITY CARD
+========================= */
+
+
+const facilityGradients = [
+
+  'from-blue-500 to-blue-700',
+
+  'from-indigo-500 to-indigo-700',
+
+  'from-cyan-500 to-cyan-700',
+
+  'from-violet-500 to-violet-700'
+
+]
+
+
+const facilityIcons = [
+
+  '🏛️',
+
+  '📋',
+
+  '💻',
+
+  '🤝'
+
+]
+
+
+
+
+
+const facilities = computed(()=>{
+
+
+  return liveFacilities.value
+
+  .slice(0,4)
+
+  .map(
+
+    (facility,index)=>({
+
+
+      ...facility,
+
+
+
+      location:
+
+      typeof facility.location === 'object'
+
+      ?
+
+      [
+
+        facility.location?.name,
+
+        facility.location?.building,
+
+        facility.location?.floor
+
+      ]
+
+      .filter(Boolean)
+
+      .join(' · ')
+
+      :
+
+      facility.location
+
+      ||
+
+      'Lokasi tersedia',
+
+
+
+
+      capacity:
+
+      `${facility.capacity || 0} orang`,
+
+
+
+
+      status:
+
+      facility.status === 'active'
+
+      ?
+
+      'Tersedia'
+
+      :
+
+      'Tidak aktif',
+
+
+
+
+      gradient:
+
+      facilityGradients[
+        index % facilityGradients.length
+      ],
+
+
+
+
+      icon:
+
+      facilityIcons[
+        index % facilityIcons.length
+      ],
+
+
+
+
+      availableSlots:
+
+      (
+
+        facility.availability_today
+
+        ||
+
+        []
+
+      )
+
+      .filter(
+
+        slot =>
+        slot.status === 'tersedia'
+
+      )
+
+      .length
+
+
+
+    })
+
+
+  )
+
+
+})
+
+
+
+
+
+
+/* =========================
+FEATURE
+========================= */
+
+
+const features = [
+
+  {
+
+    icon:Search,
+
+    title:'Cari Fasilitas',
+
+    desc:
+    'Temukan fasilitas berdasarkan tipe, lokasi, dan kapasitas.'
+
+  },
+
+
+  {
+
+    icon:Eye,
+
+    title:'Cek Ketersediaan',
+
+    desc:
+    'Lihat jadwal fasilitas secara real-time.'
+
+  },
+
+
+  {
+
+    icon:CalendarCheck,
+
+    title:'Reservasi Online',
+
+    desc:
+    'Ajukan penggunaan fasilitas dengan mudah.'
+
+  },
+
+
+  {
+
+    icon:ShieldCheck,
+
+    title:'Pengelolaan Terstruktur',
+
+    desc:
+    'Kelola penggunaan fasilitas lebih rapi.'
+
+  }
+
+
+]
+
+
+
+
+
+
+
+/* =========================
+STEPS
+========================= */
+
+
+const steps = [
+
+{
+
+num:'01',
+
+title:'Cari Fasilitas',
+
+desc:
+'Temukan fasilitas yang sesuai kebutuhan.',
+
+icon:Search
+
+},
+
+
+{
+
+num:'02',
+
+title:'Pilih Waktu',
+
+desc:
+'Tentukan tanggal dan slot penggunaan.',
+
+icon:CalendarDays
+
+},
+
+
+{
+
+num:'03',
+
+title:'Isi Tujuan',
+
+desc:
+'Masukkan tujuan penggunaan.',
+
+icon:FileText
+
+},
+
+
+{
+
+num:'04',
+
+title:'Kirim Pengajuan',
+
+desc:
+'Tunggu proses persetujuan.',
+
+icon:Send
+
+}
+
+]
+
+
+
+
+
+
+
+/* =========================
+NAVIGATION
+========================= */
+
+
+const scrollToSection = (id)=>{
+
+
+mobileMenuOpen.value=false
+
+
+
+const element =
+document.getElementById(id)
+
+
+
+if(element){
+
+element.scrollIntoView({
+
+behavior:'smooth',
+
+block:'start'
+
+})
+
+}
+
+
+}
+
+
+
+const isVisible = (id)=>{
+
+return visibleSections.value.has(id)
+
+}
+
+
+
+
+
+
+
+/* =========================
+SCROLL OBSERVER
+========================= */
+
+
+const handleScroll = ()=>{
+
+isScrolled.value =
+window.scrollY > 50
+
+}
+
+
+
+
+
+onMounted(()=>{
+
+
+window.addEventListener(
+
+'scroll',
+
+handleScroll,
+
+{
+passive:true
+}
+
+)
+
+
+
+
+observer = new IntersectionObserver(
+
+entries=>{
+
+
+entries.forEach(entry=>{
+
+
+if(entry.isIntersecting){
+
+visibleSections.value.add(
+entry.target.id
+)
+
+}
+
+
+})
+
+
+},
+
+{
+threshold:0.15
+}
+
+)
+
+
+
+
+
+setTimeout(()=>{
+
+
+document
+
+.querySelectorAll(
+'[data-animate]'
+)
+
+.forEach(element=>{
+
+
+observer.observe(element)
+
+
+})
+
+
+},100)
+
+
+
+})
+
+
+
+
+
+
+onUnmounted(()=>{
+
+
+window.removeEventListener(
+
+'scroll',
+
+handleScroll
+
+)
+
+
+
+if(observer){
+
+observer.disconnect()
+
+}
+
+
+})
+
+
+
 </script>
 
 <template>
-  <div class="rk-page rk-grid">
-    <header class="w-full pt-5 relative z-50">
-      <div class="rk-shell">
-        <nav class="flex items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-white/85 px-4 py-3 shadow-sm backdrop-blur-md sm:px-5" aria-label="Navigasi utama">
-          
-          <div class="flex items-center gap-4">
-            <RouterLink :to="{ name: 'landing' }" class="rk-focus shrink-0 rounded-lg"> 
-              <span class="rk-brand inline-flex rounded-full bg-white px-3 py-2 text-xs font-extrabold text-blue-600">RUANGKITA</span> 
-            </RouterLink>
-            
-            <div class="hidden items-center gap-2 rounded-full border border-green-100 bg-green-50 px-2.5 py-1 lg:flex" title="Sistem Operasional">
-              <span class="relative flex h-2.5 w-2.5">
-                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-                <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500"></span>
-              </span>
-              <span class="text-[11px] font-bold uppercase tracking-wider text-green-700">Sistem Online</span>
-            </div>
-          </div>
-          
-          <div class="hidden md:flex items-center gap-2 rounded-full bg-slate-50 px-4 py-1.5 border border-slate-100">
-            <Clock :size="15" class="text-slate-400" />
-            <span class="text-sm font-medium text-slate-500">{{ currentDate }} <span class="mx-1.5 text-slate-300">|</span> <span class="font-bold text-slate-700">{{ currentTime }}</span></span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <RouterLink :to="{ name: 'login' }" class="rk-btn rk-btn-primary rk-focus hidden bg-blue-600 px-4 py-2 text-sm text-white sm:inline-flex">Masuk</RouterLink> 
-            <RouterLink :to="{ name: 'register' }" class="rk-btn rk-btn-outline rk-focus bg-white px-4 py-2 text-sm text-blue-600">Daftar</RouterLink>
-          </div>
-          
-        </nav>
-      </div>
+  <div class="landing-root">
+    <header class="landing-header">
+      <nav class="landing-nav" aria-label="Navigasi utama">
+        <RouterLink :to="{ name: 'landing' }" class="brand-mark">RUANGKITA</RouterLink>
+        <div class="landing-links">
+          <a href="#beranda" @click.prevent="scrollToSection('beranda')">Beranda</a>
+          <a href="#fasilitas" @click.prevent="scrollToSection('fasilitas')">Fasilitas</a>
+          <a href="#ketersediaan" @click.prevent="scrollToSection('ketersediaan')">Ketersediaan</a>
+        </div>
+        <div class="landing-actions">
+          <RouterLink :to="{ name: 'login' }" class="link-button">Masuk</RouterLink>
+          <RouterLink :to="{ name: 'register' }" class="primary-button">Daftar</RouterLink>
+        </div>
+      </nav>
     </header>
-    
-    <main class="h-full overflow-y-auto pb-20">
-      <section id="beranda" class="rk-hero" aria-labelledby="hero-title">
-        <div class="rk-shell">
-          <div class="mx-auto max-w-4xl flex flex-col items-center text-center">
-            
-            <div class="rk-pill rk-reveal inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-extrabold uppercase text-blue-600 shadow-sm">
-              <Sparkles :size="14" aria-hidden="true" />
-              <span>RUANGKITA</span>
+
+    <main>
+      <section id="beranda" class="hero-section" data-animate>
+        <div class="hero-copy" :class="{ 'is-visible': isVisible('beranda') }">
+          <span class="eyebrow"><Sparkles :size="14" /> PLATFORM RESERVASI KAMPUS</span>
+          <h1>Kelola fasilitas kampus lebih mudah.</h1>
+          <p>Reservasi ruang, pantau ketersediaan, dan laporkan kerusakan dalam satu platform digital untuk civitas akademika.</p>
+          <div class="hero-actions">
+            <RouterLink :to="{ name: 'login' }" class="primary-button"><CalendarCheck :size="18" /> Mulai Reservasi</RouterLink>
+            <RouterLink :to="{ name: 'facilities' }" class="secondary-button"><Building2 :size="18" /> Lihat Fasilitas</RouterLink>
+          </div>
+          <div class="hero-stats">
+            <span><strong>{{ liveFacilities.length }}</strong> fasilitas aktif</span>
+            <span><strong>{{ facilitiesUpdatedAt ? 'LIVE' : '...' }}</strong> ketersediaan</span>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <img :src="campusImage" alt="Kampus Universitas Diponegoro" />
+          <div class="hero-overlay"></div>
+          <div class="hero-float"><Clock :size="16" /><span>{{ facilityAvailabilityText }}</span></div>
+          <img :src="mascotImage" alt="Maskot Universitas" class="mascot" />
+        </div>
+      </section>
+
+      <section id="fasilitas" class="section-block" data-animate>
+        <div class="section-heading">
+          <span class="eyebrow">KATALOG FASILITAS</span>
+          <h2>Ruang yang siap digunakan</h2>
+          <p>Data fasilitas dan slot diperbarui otomatis dari sistem reservasi.</p>
+        </div>
+        <div v-if="facilitiesError" class="notice error">{{ facilitiesError }}</div>
+        <div v-else-if="facilitiesLoading" class="notice">Memuat fasilitas...</div>
+        <div v-else-if="!facilities.length" class="notice">Belum ada fasilitas aktif.</div>
+        <div v-else class="facility-grid">
+          <article v-for="facility in facilities" :key="facility.id" class="facility-card">
+            <div class="facility-banner" :class="`bg-gradient-to-br ${facility.gradient}`"><span>{{ facility.icon }}</span><b><CheckCircle :size="13" /> {{ facility.status }}</b></div>
+            <div class="facility-body">
+              <h3>{{ facility.name }}</h3>
+              <p><MapPin :size="14" /> {{ facility.location }}</p>
+              <p><Users :size="14" /> {{ facility.capacity }}</p>
+              <p class="availability-label"><CheckCircle :size="14" /> {{ facility.availableSlots }} slot tersedia hari ini</p>
+              <RouterLink :to="{ name: 'facilities' }" class="card-link">Lihat detail <ArrowRight :size="14" /></RouterLink>
             </div>
-            
-            <h1 class="rk-heading rk-reveal rk-delay mt-5 max-w-2xl font-extrabold text-blue-950 text-[42px] leading-[1.1] text-balance">
-              Kelola fasilitas kampus lebih mudah.
-            </h1>
-            
-            <p class="rk-reveal rk-delay mt-6 max-w-2xl leading-[1.7] text-slate-500 text-base">
-              Reservasi ruang, pantau status fasilitas, dan laporkan kerusakan dengan satu platform.
-            </p>
-            
-            <div class="rk-reveal rk-delay-two mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <RouterLink :to="{ name: 'login' }" class="rk-btn rk-btn-primary rk-focus bg-blue-600 text-white">
-                <CalendarPlus :size="19" aria-hidden="true" />
-                <span>Mulai Reservasi</span>
-              </RouterLink>
-              <RouterLink :to="{ name: 'facilities' }" class="rk-btn rk-btn-outline rk-focus bg-white text-blue-600">
-                <Building2 :size="19" aria-hidden="true" />
-                <span>Lihat Fasilitas</span>
-              </RouterLink>
-            </div>
-            
-            <div class="rk-mockup-wrap rk-reveal rk-delay-two w-full" aria-label="Contoh tampilan reservasi RuangKita">
-              <div class="rk-mockup">
-                <div class="rk-window-top">
-                  <div class="rk-dot-row" aria-hidden="true">
-                    <span class="rk-tiny-dot"></span><span class="rk-tiny-dot"></span><span class="rk-tiny-dot"></span>
-                  </div>
-                  <div class="text-xs font-bold text-slate-500">app.ruangkita.com</div>
-                  <Bell :size="16" class="text-blue-600" aria-label="Notifikasi" />
-                </div>
-                
-                <div class="rk-mini-card one">
-                  <div class="rk-chip">
-                    <span aria-hidden="true">📅</span>
-                    <span>Reservasi</span>
-                  </div>
-                </div>
-                
-                <article class="rk-reservation-card">
-                  <div class="flex items-start justify-between gap-4">
-                    <div>
-                      <p class="text-xs font-bold uppercase tracking-wider text-blue-600">FASILITAS</p>
-                      <h2 class="mt-1 font-extrabold text-blue-950 text-xl">Auditorium Utama</h2>
-                    </div>
-                    <span class="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">Disetujui</span>
-                  </div>
-                  <div class="mt-5 grid grid-cols-2 gap-3 text-left">
-                    <div class="rounded-xl bg-blue-50 p-3">
-                      <p class="text-xs font-semibold text-slate-500">Waktu</p>
-                      <p class="mt-1 text-sm font-extrabold text-blue-950">08:00 - 10:00</p>
-                    </div>
-                    <div class="rounded-xl bg-blue-50 p-3">
-                      <p class="text-xs font-semibold text-slate-500">Kapasitas</p>
-                      <p class="mt-1 text-sm font-extrabold text-blue-950">500 Orang</p>
-                    </div>
-                  </div>
-                </article>
-                
-                <div class="rk-mini-card two">
-                  <div class="rk-chip">
-                    <span aria-hidden="true">✨</span>
-                    <span>Fasilitas</span>
-                  </div>
-                </div>
-                
-                <div class="absolute bottom-5 left-1/2 z-10 -translate-x-1/2">
-                  <div class="rk-chip">
-                    <span aria-hidden="true">✓</span>
-                    <span>Cek Status</span>
-                  </div>
-                </div>
-                
-              </div>
-            </div>
-            
+          </article>
+        </div>
+      </section>
+
+      <section id="ketersediaan" class="availability-section" data-animate>
+        <div class="availability-panel">
+          <div class="calendar-panel">
+            <div class="calendar-header"><button type="button" aria-label="Bulan sebelumnya" @click="prevMonth"><ChevronLeft :size="18" /></button><strong>{{ monthNames[currentCalendarMonth] }} {{ currentCalendarYear }}</strong><button type="button" aria-label="Bulan berikutnya" @click="nextMonth"><ChevronRight :size="18" /></button></div>
+            <div class="calendar-days"><span v-for="day in dayLabels" :key="day">{{ day }}</span></div>
+            <div class="calendar-grid"><span v-for="(day, index) in calendarDays" :key="index" :class="{ empty: day.empty, today: day.today, available: day.available, booked: day.booked }">{{ day.day }}</span></div>
+            <div class="legend"><span><i class="dot available"></i> Tersedia</span><span><i class="dot booked"></i> Terisi</span></div>
+          </div>
+          <div class="availability-copy">
+            <span class="eyebrow">KETERSEDIAAN REAL-TIME</span>
+            <h2>Pilih fasilitas, lihat slot yang tersedia.</h2>
+            <label>Fasilitas yang dipantau<select v-model="selectedFacilityId" :disabled="facilitiesLoading || !liveFacilities.length"><option v-for="facility in liveFacilities" :key="facility.id" :value="facility.id">{{ facility.name }}</option></select></label>
+            <p class="sync-status">{{ facilityAvailabilityText }}<span v-if="facilitiesUpdatedAt"> · {{ facilitiesUpdatedAt.toLocaleTimeString() }}</span></p>
+            <div class="time-slots"><div v-for="slot in timeSlots.slice(0, 8)" :key="slot.time" :class="['time-slot', slot.status]"><Clock :size="14" /> <span>{{ slot.time }}</span><b>{{ slot.status === 'available' ? 'Tersedia' : 'Terisi' }}</b></div></div>
           </div>
         </div>
       </section>
+
+      <section class="cta-section"><div><span class="eyebrow">RUANGKITA</span><h2>Siap memakai fasilitas kampus?</h2><p>Masuk untuk mengajukan reservasi dan mengelola aktivitas Anda.</p><RouterLink :to="{ name: 'login' }" class="primary-button">Mulai sekarang <ArrowRight :size="17" /></RouterLink></div></section>
     </main>
+
+    <footer class="landing-footer">
+      <div class="footer-main">
+        <div class="footer-brand">
+          <strong>RUANGKITA</strong>
+          <p>Platform reservasi fasilitas Universitas Diponegoro untuk penggunaan ruang yang lebih tertata.</p>
+          <span class="footer-status"><i></i> Sistem operasional</span>
+        </div>
+        <div class="footer-column">
+          <h3>Navigasi</h3>
+          <a href="#beranda" @click.prevent="scrollToSection('beranda')">Beranda</a>
+          <a href="#fasilitas" @click.prevent="scrollToSection('fasilitas')">Fasilitas</a>
+          <a href="#ketersediaan" @click.prevent="scrollToSection('ketersediaan')">Ketersediaan</a>
+        </div>
+        <div class="footer-column">
+          <h3>Layanan</h3>
+          <RouterLink :to="{ name: 'login' }">Masuk ke akun</RouterLink>
+          <RouterLink :to="{ name: 'register' }">Daftar akun</RouterLink>
+          <RouterLink :to="{ name: 'facilities' }">Katalog fasilitas</RouterLink>
+        </div>
+        <div class="footer-column footer-contact">
+          <h3>Kontak</h3>
+          <span>Universitas Diponegoro</span>
+          <span>Jl. Prof. Soedarto, SH</span>
+          <span>Tembalang, Semarang</span>
+          <a href="mailto:info@undip.ac.id">info@undip.ac.id</a>
+        </div>
+      </div>
+      <div class="footer-bottom"><span>© {{ new Date().getFullYear() }} RuangKita</span><span>Universitas Diponegoro</span></div>
+    </footer>
   </div>
 </template>
 
 <style scoped>
-    :root {
-      --rk-blue: #2563eb;
-      --rk-blue-dark: #1d4ed8;
-      --rk-blue-soft: #eff6ff;
-      --rk-line: #dbeafe;
-      --rk-ink: #172554;
-      --rk-body: #475569;
-      --rk-shadow: 0 22px 55px rgba(37, 99, 235, 0.15);
-      --rk-shadow-soft: 0 12px 30px rgba(37, 99, 235, 0.10);
-    }
-
-    .rk-page {
-      width: 100%;
-      height: 100dvh;
-      overflow: hidden;
-      position: fixed;
-      inset: 0;
-      isolation: isolate;
-      color: #172554;
-      background-color: #ffffff;
-    }
-
-    .rk-grid {
-      background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1px, transparent 1px);
-      background-size: 30px 30px;
-      background-position: center top;
-    }
-
-    .rk-shell {
-      width: 100%;
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    .rk-focus:focus-visible {
-      outline: 3px solid rgba(37, 99, 235, 0.42);
-      outline-offset: 4px;
-    }
-
-    .rk-heading {
-      letter-spacing: -0.055em;
-      line-height: 1.03;
-    }
-
-    .rk-brand {
-      letter-spacing: 0.13em;
-      box-shadow: 0 7px 18px rgba(37, 99, 235, 0.14);
-    }
-
-    .rk-pill {
-      letter-spacing: 0.12em;
-    }
-
-    .rk-nav-link {
-      color: #475569;
-      font-size: 0.875rem;
-      font-weight: 700;
-      text-decoration: none;
-      transition: color 180ms ease;
-    }
-
-    .rk-nav-link:hover { color: #2563eb; }
-
-    .rk-btn {
-      min-height: 50px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.55rem;
-      border-radius: 0.9rem;
-      padding: 0.78rem 1.2rem;
-      font-weight: 700;
-      text-decoration: none;
-      transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
-    }
-
-    .rk-btn:hover {
-      transform: translateY(-2px);
-    }
-
-    .rk-btn-primary {
-      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.26);
-    }
-
-    .rk-btn-primary:hover {
-      box-shadow: 0 16px 30px rgba(37, 99, 235, 0.32);
-    }
-
-    .rk-btn-outline {
-      border: 1px solid #bfdbfe;
-      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.06);
-    }
-
-    .rk-hero {
-      position: relative;
-      padding: 4.5rem 0 9.5rem;
-    }
-
-    .rk-hero::before,
-    .rk-hero::after {
-      content: "";
-      position: absolute;
-      z-index: -1;
-      border-radius: 999px;
-      filter: blur(16px);
-      pointer-events: none;
-    }
-
-    .rk-hero::before {
-      width: 360px;
-      height: 360px;
-      top: -150px;
-      right: -130px;
-      background: rgba(147, 197, 253, 0.30);
-    }
-
-    .rk-hero::after {
-      width: 300px;
-      height: 300px;
-      bottom: 20px;
-      left: -170px;
-      background: rgba(191, 219, 254, 0.38);
-    }
-
-    .rk-mockup-wrap {
-      height: 335px;
-      max-width: 770px;
-      margin: 3.5rem auto -12.6rem;
-      position: relative;
-      overflow: hidden;
-      border-radius: 2rem 2rem 0 0;
-      border: 1px solid rgba(191, 219, 254, 0.92);
-      box-shadow: 0 24px 65px rgba(37, 99, 235, 0.15);
-    }
-
-    .rk-mockup {
-      min-height: 430px;
-      padding: 1.35rem;
-      position: relative;
-      background: linear-gradient(145deg, #dbeafe 0%, #eff6ff 48%, #ffffff 100%);
-    }
-
-    .rk-mockup::before {
-      content: "";
-      position: absolute;
-      width: 230px;
-      height: 230px;
-      top: -92px;
-      right: -42px;
-      border-radius: 999px;
-      background: rgba(96, 165, 250, 0.22);
-      filter: blur(15px);
-    }
-
-    .rk-window-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: relative;
-      z-index: 1;
-      padding: 0.78rem 0.9rem;
-      border-radius: 1rem;
-      background: rgba(255, 255, 255, 0.76);
-      border: 1px solid rgba(255, 255, 255, 0.92);
-    }
-
-    .rk-dot-row { display: flex; gap: 5px; }
-    .rk-tiny-dot { width: 7px; height: 7px; border-radius: 50%; background: #93c5fd; }
-    .rk-tiny-dot:first-child { background: #2563eb; }
-
-    .rk-reservation-card {
-      width: min(100%, 450px);
-      position: relative;
-      z-index: 2;
-      margin: 1.45rem auto 0;
-      padding: 1.35rem;
-      border: 1px solid #dbeafe;
-      border-radius: 1.35rem;
-      background: rgba(255, 255, 255, 0.94);
-      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.10);
-    }
-
-    .rk-mini-card {
-      position: absolute;
-      z-index: 3;
-      padding: 0.8rem 0.9rem;
-      border: 1px solid rgba(219, 234, 254, 0.96);
-      border-radius: 1rem;
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: 0 12px 25px rgba(37, 99, 235, 0.12);
-    }
-
-    .rk-mini-card.one { top: 96px; left: 5%; }
-    .rk-mini-card.two { right: 5%; bottom: 78px; }
-
-    .rk-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.42rem;
-      padding: 0.55rem 0.72rem;
-      border: 1px solid rgba(219, 234, 254, 0.95);
-      border-radius: 999px;
-      background: #ffffff;
-      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.09);
-      color: #172554;
-      font-size: 0.75rem;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .rk-glass {
-      background: rgba(255, 255, 255, 0.68);
-      border: 1px solid rgba(255, 255, 255, 0.95);
-      box-shadow: 0 18px 42px rgba(37, 99, 235, 0.12);
-    }
-
-    @supports (backdrop-filter: blur(1px)) {
-      .rk-glass { backdrop-filter: blur(15px); }
-    }
-
-    .rk-stat-strip {
-      position: relative;
-      z-index: 3;
-      margin-top: 7.9rem;
-      border-radius: 1.35rem;
-      padding: 0.7rem;
-    }
-
-    .rk-stat {
-      min-height: 96px;
-      padding: 1rem;
-      border-radius: 1rem;
-      background: rgba(255, 255, 255, 0.55);
-    }
-
-    .rk-card {
-      border: 1px solid #dbeafe;
-      border-radius: 1.5rem;
-      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.10);
-      transition: transform 180ms ease, box-shadow 180ms ease;
-    }
-
-    .rk-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 22px 55px rgba(37, 99, 235, 0.15);
-    }
-
-    .rk-icon-box {
-      width: 46px;
-      height: 46px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 0.9rem;
-      background: #eff6ff;
-      color: #2563eb;
-    }
-
-    .rk-step-number {
-      width: 34px;
-      height: 34px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 999px;
-      background: #2563eb;
-      color: #ffffff;
-      font-size: 0.875rem;
-      font-weight: 800;
-      box-shadow: 0 8px 16px rgba(37, 99, 235, 0.22);
-    }
-
-    .rk-role {
-      border: 1px solid #dbeafe;
-      border-radius: 1rem;
-      background: #ffffff;
-      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.06);
-    }
-
-    .rk-reveal {
-      animation: rkReveal 650ms ease both;
-    }
-
-    .rk-delay { animation-delay: 120ms; }
-    .rk-delay-two { animation-delay: 210ms; }
-
-    @keyframes rkReveal {
-      from { opacity: 0; transform: translateY(16px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @media (max-width: 767px) {
-      .rk-shell { padding: 0 18px; }
-      .rk-hero { padding-top: 3.4rem; padding-bottom: 8rem; }
-      .rk-mockup-wrap { height: 280px; margin-top: 2.5rem; margin-bottom: -10.6rem; }
-      .rk-mockup { min-height: 400px; padding: 1rem; }
-      .rk-mini-card.one { left: -15px; }
-      .rk-mini-card.two { right: -18px; }
-      .rk-stat-strip { margin-top: 6.3rem; }
-    }
+.landing-root { --blue: #2563eb; --blue-dark: #1e40af; --blue-soft: #eff6ff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --surface: #fff; min-height: 100vh; background: #f8fafc; color: var(--ink); font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
+.landing-header { position: sticky; top: 0; z-index: 20; padding: 18px 24px 0; }
+.landing-nav { max-width: 1180px; min-height: 62px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 10px 16px; border: 1px solid #dbeafe; border-radius: 14px; background: rgba(255,255,255,.92); box-shadow: 0 10px 28px rgba(15,23,42,.06); backdrop-filter: blur(14px); }
+.brand-mark { color: var(--blue); font-weight: 800; letter-spacing: .1em; text-decoration: none; }
+.landing-links, .landing-actions, .hero-actions, .hero-stats { display: flex; align-items: center; gap: 20px; }
+.landing-links a, .link-button, .landing-footer a { color: var(--muted); font-size: 13px; font-weight: 700; text-decoration: none; }
+.landing-links a:hover, .link-button:hover, .landing-footer a:hover { color: var(--blue); }
+.primary-button, .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 8px; font-weight: 700; text-decoration: none; }
+.primary-button { border: 1px solid var(--blue); background: var(--blue); color: #fff; box-shadow: 0 10px 22px rgba(37,99,235,.2); }
+.primary-button:hover { background: var(--blue-dark); }
+.secondary-button { border: 1px solid #bfdbfe; background: #fff; color: var(--blue); }
+.menu-button, .calendar-header button { display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+.menu-button { width: 40px; height: 40px; }
+.mobile-nav { display: none; }
+.hero-section, .section-block, .availability-section { max-width: 1180px; margin: auto; padding: 96px 24px; }
+.hero-section { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 64px; min-height: 680px; }
+.hero-copy, .hero-visual { animation: rise .65s ease both; }
+.eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .11em; }
+h1, h2, h3, p { margin-top: 0; }
+h1 { max-width: 600px; margin-bottom: 20px; font-size: clamp(42px, 6vw, 72px); line-height: 1.02; letter-spacing: -.05em; }
+h2 { font-size: clamp(30px, 4vw, 46px); line-height: 1.08; letter-spacing: -.04em; }
+.hero-copy > p, .section-heading p, .availability-copy > p, .cta-section p { max-width: 560px; color: var(--muted); line-height: 1.7; }
+.hero-actions { margin-top: 30px; flex-wrap: wrap; }
+.hero-stats { margin-top: 32px; color: var(--muted); font-size: 12px; }
+.hero-stats strong { display: block; color: var(--ink); font-size: 22px; }
+.hero-visual { position: relative; min-height: 480px; overflow: hidden; border-radius: 18px; box-shadow: 0 24px 60px rgba(15,23,42,.18); }
+.hero-visual > img:first-child { width: 100%; height: 100%; min-height: 480px; object-fit: cover; display: block; }
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(15,23,42,.72)); }
+.hero-float { position: absolute; left: 22px; bottom: 22px; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 44px); padding: 13px 16px; border: 1px solid rgba(255,255,255,.5); border-radius: 10px; background: rgba(255,255,255,.92); color: var(--blue); font-size: 12px; font-weight: 800; }
+.mascot { position: absolute; top: 20px; right: 20px; width: 72px; height: 72px; border: 3px solid #fff; border-radius: 50%; object-fit: cover; }
+.section-block { background: #fff; max-width: none; padding-left: max(24px, calc((100% - 1132px) / 2)); padding-right: max(24px, calc((100% - 1132px) / 2)); }
+.section-heading { margin-bottom: 36px; }
+.facility-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 290px)); justify-content: center; gap: 18px; }
+.facility-card { width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 8px 20px rgba(15,23,42,.05); }
+.facility-banner { position: relative; height: 132px; display: grid; place-items: center; color: #fff; }.facility-banner > span { font-size: 48px; opacity: .5; }.facility-banner b { position: absolute; top: 12px; right: 12px; display: flex; align-items: center; gap: 4px; padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,.9); color: #15803d; font-size: 10px; }
+.facility-body { padding: 18px; }.facility-body h3 { margin-bottom: 13px; font-size: 17px; }.facility-body p { display: flex; align-items: center; gap: 6px; margin: 7px 0; color: var(--muted); font-size: 12px; }.facility-body .availability-label { color: var(--blue); font-weight: 700; }.card-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--blue); font-size: 12px; font-weight: 800; text-decoration: none; }
+.notice { padding: 18px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: #fff; }.notice.error { color: #b91c1c; background: #fef2f2; }
+.availability-section { max-width: none; background: var(--blue-soft); padding-left: max(24px, calc((100% - 1132px) / 2)); padding-right: max(24px, calc((100% - 1132px) / 2)); }.availability-panel { display: grid; grid-template-columns: .9fr 1.1fr; gap: 56px; align-items: center; }.calendar-panel { padding: 22px; border: 1px solid #dbeafe; border-radius: 14px; background: #fff; }.calendar-header, .calendar-days, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; align-items: center; text-align: center; }.calendar-header { grid-template-columns: 38px 1fr 38px; margin-bottom: 22px; }.calendar-header button { width: 34px; height: 34px; }.calendar-days { margin-bottom: 8px; color: #94a3b8; font-size: 11px; font-weight: 700; }.calendar-grid span { display: grid; place-items: center; aspect-ratio: 1; border-radius: 7px; color: var(--muted); font-size: 12px; }.calendar-grid .available { background: #dcfce7; color: #15803d; }.calendar-grid .booked { background: #fee2e2; color: #b91c1c; }.calendar-grid .today { outline: 2px solid var(--blue); outline-offset: 2px; }.legend { display: flex; gap: 16px; margin-top: 20px; color: var(--muted); font-size: 11px; }.dot { width: 8px; height: 8px; display: inline-block; margin-right: 4px; border-radius: 50%; background: #dcfce7; }.dot.booked { background: #fee2e2; }.availability-copy label { display: grid; gap: 8px; max-width: 430px; margin: 24px 0 10px; color: var(--ink); font-size: 12px; font-weight: 800; }.availability-copy select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; }.sync-status { color: #15803d !important; font-size: 12px; font-weight: 700; }.time-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }.time-slot { display: flex; align-items: center; gap: 7px; padding: 10px; border-radius: 7px; background: #fff; color: var(--muted); font-size: 11px; }.time-slot b { margin-left: auto; font-size: 10px; }.time-slot.available b { color: #15803d; }.time-slot.booked b { color: #b91c1c; }
+.cta-section { padding: 82px 24px; text-align: center; background: var(--blue); color: #fff; }.cta-section h2 { margin: 15px auto; color: #fff; }.cta-section p { margin: 0 auto 26px; color: #dbeafe; }.cta-section .primary-button { background: #fff; color: var(--blue); }
+.landing-footer { padding: 58px max(24px, calc((100% - 1132px) / 2)) 24px; background: #fff; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.footer-main { display: grid; grid-template-columns: 1.6fr repeat(3, 1fr); gap: 48px; padding-bottom: 44px; }
+.footer-brand strong { color: var(--blue); letter-spacing: .1em; font-size: 18px; }
+.footer-brand p { max-width: 270px; margin: 16px 0; color: var(--muted); line-height: 1.7; }
+.footer-status { display: inline-flex; align-items: center; gap: 7px; color: #15803d; font-size: 11px; font-weight: 700; }
+.footer-status i { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 4px #dcfce7; }
+.footer-column { display: flex; flex-direction: column; align-items: flex-start; gap: 11px; }
+.footer-column h3 { margin: 2px 0 8px; color: var(--ink); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.footer-column a, .footer-column span { color: var(--muted); font-size: 12px; text-decoration: none; }
+.footer-column a:hover { color: var(--blue); }
+.footer-bottom { display: flex; justify-content: space-between; gap: 16px; padding-top: 20px; border-top: 1px solid var(--line); color: #94a3b8; font-size: 11px; }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 900px) { .landing-links, .landing-actions { display: flex; gap: 10px; }.hero-section, .availability-panel { grid-template-columns: 1fr; gap: 36px; }.hero-section { padding-top: 72px; }.hero-visual { min-height: 360px; }.hero-visual > img:first-child { min-height: 360px; }.facility-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 290px)); } }
+@media (max-width: 560px) { .landing-header { padding: 10px 12px 0; }.hero-section, .section-block, .availability-section { padding: 64px 18px; }.hero-section { min-height: auto; }.hero-stats { gap: 12px; flex-wrap: wrap; }.facility-grid, .time-slots { grid-template-columns: 1fr; }.footer-main { grid-template-columns: 1fr 1fr; gap: 30px 20px; }.footer-brand { grid-column: 1 / -1; }.footer-bottom { flex-direction: column; gap: 8px; }.hero-visual, .hero-visual > img:first-child { min-height: 300px; } }
 </style>

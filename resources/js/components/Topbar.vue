@@ -15,7 +15,7 @@ async function logout() {
     signingOut.value = true;
     const token = getToken();
     clearAuthSession();
-    await router.replace({ name: 'login' });
+    await router.replace({ name: 'landing' });
 
     try {
         if (token) {

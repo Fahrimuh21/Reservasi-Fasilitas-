@@ -92,3 +92,73 @@
     .workflow-dialog { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { .wf-spin { animation: none; } }
+
+/* Shared dashboard surface: light canvas, white cards, and readable slate text. */
+.workflow {
+    color: var(--slate-900);
+}
+
+.workflow .wf-header h1,
+.workflow .wf-section-head h2,
+.workflow .wf-request h3,
+.workflow .wf-lower-section h2 {
+    color: var(--slate-900);
+}
+
+.workflow .wf-metrics {
+    gap: 14px;
+    border: 0;
+    background: transparent;
+}
+
+.workflow .wf-metric {
+    min-height: 112px;
+    border: 1px solid var(--slate-200);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
+}
+
+.workflow .wf-metric + .wf-metric {
+    border-left: 1px solid var(--slate-200);
+}
+
+.workflow .wf-request,
+.workflow .wf-search,
+.workflow .wf-empty {
+    border-color: var(--slate-200);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .04);
+}
+
+.workflow .wf-request {
+    border-radius: 12px;
+}
+
+.workflow .wf-toolbar {
+    padding: 10px 14px;
+    border: 1px solid var(--slate-200);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.workflow .wf-tabs button[aria-pressed="true"] {
+    color: var(--blue-700);
+}
+
+.workflow .wf-button.wf-primary {
+    background: var(--blue-600);
+    border-color: var(--blue-600);
+}
+
+.workflow .wf-button.wf-primary:hover {
+    background: var(--blue-700);
+}
+
+.workflow .wf-button.wf-danger {
+    background: #fff;
+    color: #b91c1c;
+}
+
+.workflow .wf-status {
+    font-weight: 700;
+}
