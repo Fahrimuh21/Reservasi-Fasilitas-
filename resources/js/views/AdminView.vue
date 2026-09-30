@@ -680,7 +680,6 @@ RUANGKITA / ADMIN
 
 Pusat analitik
 
-<span class="sun" aria-hidden="true">✦</span>
 
 
 </h1>
