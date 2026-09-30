@@ -347,9 +347,6 @@ FACILITY CATALOG
 
 <h1>
 Explore Facilities
-<span class="sun">
-✦
-</span>
 </h1>
 
 
