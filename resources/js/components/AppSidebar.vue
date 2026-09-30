@@ -172,7 +172,7 @@ async function logout(){
 const token = getToken();
 clearAuthSession();
 await router.replace({
-    name:"login"
+    name:"landing"
 });
 
 

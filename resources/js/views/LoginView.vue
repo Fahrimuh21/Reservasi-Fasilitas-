@@ -1,846 +1,114 @@
 <script setup>
-
-import {ref} from "vue";
-import {useRouter} from "vue-router";
-import axios from "axios";
-
-import {
-    setAuthSession
-} from "../auth";
-
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from 'axios';
+import { ArrowRight } from 'lucide-vue-next';
+import campusImage from '../../asset/Undip.png';
+import { setAuthSession } from '../auth';
 
 const router = useRouter();
-
-
-const form = ref({
-
-    email:"",
-    password:""
-
-});
-
-
+const form = ref({ email: '', password: '' });
 const isSubmitting = ref(false);
+const errorMessage = ref('');
 
-const errorMessage = ref("");
-
-
-
-
-async function submitLogin(){
-
-
-isSubmitting.value=true;
-
-errorMessage.value="";
-
-
-
-try{
-
-
-const response =
-await axios.post(
-"/api/login",
-form.value
-);
-
-
-
-const {
-token,
-user
+async function submitLogin() {
+    if (isSubmitting.value) return;
+    isSubmitting.value = true;
+    errorMessage.value = '';
+    try {
+        const response = await axios.post('/api/login', form.value);
+        setAuthSession(response.data.token, response.data.user);
+        const destination = { admin: 'admin', officer: 'officer', user: 'facilities' };
+        await router.push({ name: destination[response.data.user.role] || 'facilities' });
+    } catch (error) {
+        errorMessage.value = error?.response?.data?.message || 'Login gagal. Periksa email dan password.';
+    } finally {
+        isSubmitting.value = false;
+    }
 }
-=
-response.data;
-
-
-
-setAuthSession(
-token,
-user
-);
-
-
-
-const redirect={
-
-admin:"admin",
-
-officer:"officer",
-
-user:"facilities"
-
-};
-
-
-
-router.push({
-
-name:
-redirect[user.role]
-||
-"facilities"
-
-});
-
-
-
-}
-
-catch(error){
-
-
-errorMessage.value =
-
-error?.response?.data?.message
-
-||
-
-"Login gagal";
-
-
-
-}
-
-finally{
-
-
-isSubmitting.value=false;
-
-
-}
-
-
-
-}
-
-
 </script>
 
-
-
-
-
 <template>
-
-
-<main class="login-wrapper">
-
-
-<div class="auth-panel">
-
-
-
-<div class="auth-illustration">
-
-
-<div class="illustration-badge">
-
-RUANGKITA
-
-</div>
-
-
-<div class="illustration-circle">
-
-
-<div class="mini-card top">
-
-📅 Reservasi
-
-</div>
-
-
-
-<div class="mini-card mid">
-
-✅ Cek Status
-
-</div>
-
-
-
-<div class="mini-card bottom">
-
-📍 Fasilitas
-
-</div>
-
-
-</div>
-
-
-
-
-<h2>
-
-Kelola fasilitas kampus lebih mudah.
-
-</h2>
-
-
-
-<p>
-
-Reservasi ruang, pantau status fasilitas,
-dan laporkan kerusakan dengan satu platform.
-
-</p>
-
-
-
-</div>
-
-
-
-
-
-
-
-<div class="auth-card">
-
-
-
-<div class="brand-badge">
-
-R
-
-</div>
-
-
-
-<h1>
-
-Masuk ke RuangKita
-
-</h1>
-
-
-
-<p class="subtitle">
-
-Kelola reservasi dan laporan fasilitas kampus.
-
-</p>
-
-
-
-
-<form
-@submit.prevent="submitLogin"
->
-
-
-
-<label>
-
-Email
-
-<input
-
-v-model="form.email"
-
-type="email"
-
-placeholder="email@gmail.com"
-
-/>
-
-</label>
-
-
-
-<label>
-
-Password
-
-<input
-
-v-model="form.password"
-
-type="password"
-
-placeholder="Password"
-
-/>
-
-</label>
-
-
-
-<div
-v-if="errorMessage"
-class="error-box"
->
-
-{{errorMessage}}
-
-</div>
-
-
-
-
-<button
-class="primary-button"
-:disabled="isSubmitting"
->
-
-
-{{
-
-isSubmitting
-?
-"Memproses..."
-:
-"Masuk"
-
-}}
-
-
-
-</button>
-
-
-
-
-</form>
-
-
-<RouterLink
-class="guest-link"
-:to="{name:'facilities'}"
->
-
-Masuk sebagai tamu
-
-</RouterLink>
-
-
-
-
-<div class="auth-footer">
-
-Belum punya akun?
-
-<RouterLink
-:to="{name:'register'}"
->
-
-Daftar sekarang
-
-</RouterLink>
-
-
-</div>
-
-
-</div>
-
-
-
-</div>
-
-
-</main>
-
-
+  <main class="auth-page">
+    <section class="auth-panel">
+      <div class="auth-form-panel">
+        <RouterLink :to="{ name: 'landing' }" class="auth-brand">RUANGKITA</RouterLink>
+        <div class="auth-heading">
+          <span class="auth-eyebrow">AKSES CIVITAS AKADEMIKA</span>
+          <h1>Selamat datang kembali</h1>
+          <p>Masuk untuk melanjutkan reservasi dan pengelolaan fasilitas kampus.</p>
+        </div>
+        <form @submit.prevent="submitLogin">
+          <label>Email<input v-model="form.email" type="email" placeholder="nama@kampus.ac.id" required /></label>
+          <label>Password<input v-model="form.password" type="password" placeholder="Masukkan password" required /></label>
+          <p v-if="errorMessage" class="auth-error" role="alert">{{ errorMessage }}</p>
+          <button class="auth-submit" type="submit" :disabled="isSubmitting">{{ isSubmitting ? 'Memproses...' : 'Masuk' }}<ArrowRight :size="17" /></button>
+        </form>
+        <RouterLink :to="{ name: 'landing' }" class="guest-link">Kembali ke halaman utama</RouterLink>
+        <p class="auth-switch">Belum punya akun? <RouterLink :to="{ name: 'register' }">Daftar sekarang</RouterLink></p>
+      </div>
+      <div class="auth-image-panel">
+        <img :src="campusImage" alt="Kampus Universitas Diponegoro" />
+        <div class="auth-image-copy"><span>RUANGKITA / UNDIP</span><h2>Fasilitas kampus, lebih dekat dan teratur.</h2><p>Satu ruang digital untuk mencari, memesan, dan memantau penggunaan fasilitas.</p></div>
+      </div>
+    </section>
+  </main>
 </template>
 
-
-
-
-
 <style scoped>
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: 32px; background: #f8fafc; font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; color: #0f172a; }
+.auth-panel { width: min(900px, 100%); min-height: 560px; display: grid; grid-template-columns: .9fr 1.1fr; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; box-shadow: 0 24px 70px rgba(15,23,42,.12); }
+.auth-form-panel { display: flex; flex-direction: column; justify-content: center; padding: 38px 42px; }
+.auth-brand { margin-bottom: 42px; color: #2563eb; font-size: 16px; font-weight: 800; letter-spacing: .1em; text-decoration: none; }
+.auth-eyebrow { color: #2563eb; font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+.auth-heading h1 { margin: 13px 0 10px; font-size: 32px; line-height: 1.08; letter-spacing: -.04em; }
+.auth-heading p { margin: 0 0 32px; color: #64748b; line-height: 1.6; font-size: 14px; }
+form { display: grid; gap: 17px; }
+label { display: grid; gap: 8px; color: #334155; font-size: 13px; font-weight: 700; }
+input { min-height: 48px; padding: 0 14px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #0f172a; font: inherit; }
+input:focus { outline: 3px solid #dbeafe; border-color: #2563eb; }
+.auth-error { margin: 0; padding: 10px 12px; border-radius: 7px; background: #fef2f2; color: #b91c1c; font-size: 12px; }
+.auth-submit { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 7px; background: #2563eb; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.auth-submit:hover { background: #1d4ed8; }
+.auth-submit:disabled { opacity: .7; cursor: wait; }
+.guest-link { margin-top: 14px; color: #2563eb; font-size: 12px; font-weight: 700; text-align: center; text-decoration: none; }
+.auth-switch { margin: 34px 0 0; color: #64748b; font-size: 12px; text-align: center; }
+.auth-switch a { color: #2563eb; font-weight: 800; text-decoration: none; }
+.auth-image-panel { position: relative; min-height: 560px; overflow: hidden; background: #1e3a8a; }
+.auth-image-panel img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.auth-image-panel::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,.05), rgba(15,23,42,.75)); }
+.auth-image-copy { position: absolute; z-index: 1; right: 48px; bottom: 48px; left: 48px; color: #fff; }
+.auth-image-copy span { font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+.auth-image-copy h2 { max-width: 470px; margin: 16px 0 10px; font-size: 36px; line-height: 1.08; letter-spacing: -.04em; }
+.auth-image-copy p { max-width: 440px; margin: 0; color: #dbeafe; line-height: 1.6; font-size: 13px; }
+@media (max-width: 760px) { .auth-page { padding: 16px; } .auth-panel { grid-template-columns: 1fr; } .auth-image-panel { min-height: 240px; grid-row: 1; } .auth-image-copy { right: 24px; bottom: 24px; left: 24px; } .auth-image-copy h2, .auth-image-copy p { display: none; } .auth-form-panel { padding: 32px 24px; grid-row: 2; } .auth-brand { margin-bottom: 42px; } }
+.auth-page { height: 100dvh; min-height: 0; padding: 16px; overflow: hidden; }
+.auth-panel { width: min(820px, calc(100vw - 32px)); height: min(560px, calc(100dvh - 32px)); min-height: 0; }
+.auth-form-panel { padding: 28px 34px; }
+.auth-brand { margin-bottom: 28px; }
+.auth-heading h1 { font-size: 29px; }
+.auth-heading p { margin-bottom: 22px; }
+form { gap: 12px; }
+input, .auth-submit { min-height: 42px; }
+.auth-switch { margin-top: 20px; }
+.auth-image-panel { min-height: 0; }
+.auth-image-copy { right: 32px; bottom: 32px; left: 32px; }
+.auth-image-copy h2 { font-size: 29px; }
+@media (max-width: 760px) { .auth-page { height: auto; min-height: 100dvh; overflow: auto; } .auth-panel { width: min(100%, 460px); height: auto; } }
 
-.login-wrapper{
-
-
-position:fixed;
-
-inset:0;
-
-
-display:flex;
-
-align-items:center;
-
-justify-content:center;
-
-
-background:
-
-linear-gradient(
-135deg,
-#eff6ff,
-#f8fafc
-);
-
-
-padding:30px;
-
-
+@media (min-width: 761px) {
+  .auth-page { padding: 10px; }
+  .auth-panel { width: min(620px, calc(100vw - 20px)); height: min(440px, calc(100dvh - 20px)); }
+  .auth-form-panel { padding: 18px 22px; }
+  .auth-brand { margin-bottom: 16px; font-size: 13px; }
+  .auth-heading h1 { font-size: 22px; }
+  .auth-heading p { margin-bottom: 12px; font-size: 11px; }
+  form { gap: 7px; }
+  label { gap: 5px; font-size: 11px; }
+  input, .auth-submit { min-height: 32px; font-size: 11px; }
+  .guest-link { margin-top: 6px; font-size: 10px; }
+  .auth-switch { margin-top: 10px; font-size: 10px; }
+  .auth-image-copy { right: 24px; bottom: 24px; left: 24px; }
+  .auth-image-copy h2 { margin-top: 8px; font-size: 21px; }
 }
-
-
-
-.auth-panel{
-
-
-width:1100px;
-
-max-width:95%;
-
-
-display:grid;
-
-grid-template-columns:1fr .9fr;
-
-
-background:white;
-
-
-border-radius:30px;
-
-
-overflow:hidden;
-
-
-box-shadow:
-
-0 30px 80px
-rgba(0,0,0,.12);
-
-
-}
-
-
-
-.auth-illustration{
-
-
-padding:60px;
-
-
-background:
-
-linear-gradient(
-135deg,
-#dbeafe,
-#eff6ff
-);
-
-
-}
-
-
-
-.illustration-badge{
-
-
-display:inline-block;
-
-padding:8px 15px;
-
-border-radius:30px;
-
-
-background:white;
-
-color:#2563eb;
-
-
-font-weight:700;
-
-
-}
-
-
-.illustration-circle{
-
-
-height:250px;
-
-margin:40px 0;
-
-
-border-radius:30px;
-
-
-background:
-rgba(255,255,255,.4);
-
-
-position:relative;
-
-
-}
-
-
-
-.mini-card{
-
-
-position:absolute;
-
-background:white;
-
-
-padding:12px 18px;
-
-
-border-radius:14px;
-
-
-box-shadow:
-0 10px 30px rgba(0,0,0,.08);
-
-
-font-weight:700;
-
-
-}
-
-
-
-.top{
-
-top:30px;
-
-left:30px;
-
-}
-
-
-
-.mid{
-
-top:110px;
-
-right:30px;
-
-}
-
-
-
-.bottom{
-
-bottom:30px;
-
-left:80px;
-
-}
-
-
-
-
-
-.auth-illustration h2{
-
-
-font-size:42px;
-
-line-height:1.1;
-
-
-color:#0f172a;
-
-
-}
-
-
-
-.auth-illustration p{
-
-
-color:#64748b;
-
-line-height:1.7;
-
-
-}
-
-
-
-
-.auth-card{
-
-
-padding:60px;
-
-
-display:flex;
-
-flex-direction:column;
-
-justify-content:center;
-
-
-}
-
-
-
-.brand-badge{
-
-
-width:60px;
-
-height:60px;
-
-
-display:grid;
-
-place-items:center;
-
-
-background:#2563eb;
-
-
-color:white;
-
-
-font-size:26px;
-
-font-weight:900;
-
-
-border-radius:18px;
-
-
-margin-bottom:25px;
-
-
-}
-
-
-
-.auth-card h1{
-
-
-font-size:40px;
-
-
-margin:0;
-
-
-}
-
-
-
-
-.subtitle{
-
-
-color:#64748b;
-
-margin-bottom:30px;
-
-
-}
-
-
-
-
-form{
-
-
-display:flex;
-
-flex-direction:column;
-
-gap:18px;
-
-
-}
-
-
-
-label{
-
-
-display:flex;
-
-flex-direction:column;
-
-gap:8px;
-
-font-weight:700;
-
-
-}
-
-
-
-input{
-
-
-height:50px;
-
-
-border-radius:12px;
-
-
-border:1px solid #dbe3ee;
-
-
-padding:0 15px;
-
-
-background:#f8fafc;
-
-
-}
-
-
-
-input:focus{
-
-
-outline:none;
-
-
-border-color:#2563eb;
-
-
-}
-
-
-
-
-.primary-button{
-
-
-height:52px;
-
-
-border:none;
-
-
-border-radius:14px;
-
-
-background:#2563eb;
-
-
-color:white;
-
-
-font-weight:800;
-
-
-cursor:pointer;
-
-
-}
-
-
-
-.error-box{
-
-
-padding:12px;
-
-
-border-radius:12px;
-
-
-background:#fee2e2;
-
-
-color:#991b1b;
-
-
-}
-
-
-
-
-.auth-footer{
-
-
-margin-top:25px;
-
-
-text-align:center;
-
-
-}
-
-
-
-.auth-footer a{
-color:#2563eb;
-font-weight:700;
-}
-
-.guest-link{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-height:44px;
-    margin-top:14px;
-    border:1px solid var(--blue-200);
-    border-radius:12px;
-    color:var(--primary);
-    font-weight:700;
-    text-decoration:none;
-    transition:background .2s ease,border-color .2s ease;
-}
-
-.guest-link:hover{
-    background:var(--blue-50);
-    border-color:var(--primary);
-}
-
-
-
-
-@media (max-width:700px){
-    .login-wrapper{
-        position:relative;
-        min-height:100dvh;
-        padding:24px 14px;
-        overflow:auto;
-    }
-
-    .auth-panel{
-        width:min(100%, 460px);
-        max-width:100%;
-        grid-template-columns:1fr;
-        border-radius:24px;
-    }
-
-    .auth-illustration{
-        display:none;
-    }
-
-    .auth-card{
-        padding:36px 24px 30px;
-    }
-
-    .auth-card h1{
-        font-size:34px;
-        line-height:1.08;
-    }
-
-    .brand-badge{
-        margin-bottom:20px;
-    }
-}
-
-@media (max-width:380px){
-    .login-wrapper{
-        padding:16px 10px;
-    }
-
-    .auth-card{
-        padding:28px 18px 24px;
-    }
-
-    .auth-card h1{
-        font-size:30px;
-    }
-}
-
-
 </style>

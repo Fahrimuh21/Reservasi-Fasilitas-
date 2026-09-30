@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import campusImage from '../../asset/Undip.png';
 
 const router = useRouter();
 const form = ref({
@@ -44,22 +45,18 @@ async function submitRegister() {
     <div class="auth-shell">
         <div class="auth-panel">
             <div class="auth-illustration">
-                <div class="illustration-badge">RuangKita</div>
-                <div class="illustration-circle">
-                    <div class="mini-card top">📅 Reservasi</div>
-                    <div class="mini-card mid">✅ Validasi</div>
-                    <div class="mini-card bottom">📍 Fasilitas</div>
+                <img :src="campusImage" alt="Kampus Universitas Diponegoro" class="auth-campus-image" />
+                <div class="illustration-overlay">
+                    <span class="illustration-badge">RUANGKITA / UNDIP</span>
+                    <h2>Buat akun dan mulai kelola kebutuhan kampus.</h2>
+                    <p>Daftarkan diri Anda untuk mengajukan reservasi fasilitas, mengirim laporan, dan mengikuti status aktivitas kampus.</p>
                 </div>
-                <h2>Buat akun dan mulai kelola kebutuhan kampus.</h2>
-                <p>Daftarkan diri Anda untuk mengajukan reservasi fasilitas, mengirim laporan, dan mengikuti status aktivitas kampus.</p>
             </div>
 
             <div class="auth-card">
                 <div class="auth-header">
-                    <div class="brand-badge">
-                        <img :src="'/logo.png'" alt="RuangKita Logo" class="brand-logo-img" />
-                    </div>
-                    <h1>Buat Akun Baru</h1>
+                    <div class="brand-badge">RK</div>
+                    <h1>Buat akun baru</h1>
                     <p>Daftar untuk mengajukan reservasi dan laporan fasilitas.</p>
                 </div>
 
@@ -372,6 +369,17 @@ async function submitRegister() {
     }
 }
 
+@media (min-width: 901px) {
+    .auth-shell { padding: 24px 16px; }
+    .auth-panel { width: min(900px, 100%); min-height: 560px; border-radius: 14px; }
+    .auth-illustration { min-height: 560px; }
+    .auth-card { padding: 36px 34px; }
+    .auth-header { margin-bottom: 18px; }
+    .brand-badge { width: 76px; height: 76px; margin-bottom: 12px; }
+    .auth-header h1 { font-size: 2rem; }
+    .auth-form { gap: 12px; }
+}
+
 @media (max-width:700px){
     .auth-shell{
         min-height:100dvh;
@@ -411,5 +419,120 @@ async function submitRegister() {
     .auth-header h1{
         font-size:30px;
     }
+}
+
+.auth-panel {
+    grid-template-columns: .9fr 1.1fr;
+}
+
+.auth-illustration {
+    position: relative;
+    min-height: 680px;
+    padding: 0;
+    overflow: hidden;
+    grid-column: 2;
+    grid-row: 1;
+    background: #0f172a;
+}
+
+.auth-campus-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.auth-illustration::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15, 23, 42, .08), rgba(15, 23, 42, .78));
+}
+
+.illustration-overlay {
+    position: absolute;
+    z-index: 1;
+    left: 42px;
+    right: 42px;
+    bottom: 42px;
+    color: #fff;
+}
+
+.illustration-overlay h2 {
+    margin: 20px 0 0;
+    color: #fff;
+}
+
+.illustration-overlay p {
+    color: rgba(255, 255, 255, .82);
+}
+
+.illustration-badge {
+    background: rgba(255, 255, 255, .16);
+    border-color: rgba(37, 99, 235, .3);
+    color: #fff;
+}
+
+.auth-card {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+@media (max-width: 900px) {
+    .auth-illustration {
+        min-height: 260px;
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .auth-campus-image {
+        min-height: 260px;
+    }
+
+    .illustration-overlay {
+        left: 24px;
+        right: 24px;
+        bottom: 24px;
+    }
+
+    .illustration-overlay h2,
+    .illustration-overlay p {
+        display: none;
+    }
+
+    .auth-card {
+        grid-column: 1;
+        grid-row: 2;
+    }
+}
+@media (min-width: 901px) {
+    .auth-shell { height: 100dvh; min-height: 0; padding: 16px; overflow: hidden; }
+    .auth-panel { width: min(820px, calc(100vw - 32px)); height: min(580px, calc(100dvh - 32px)); min-height: 0; }
+    .auth-illustration { min-height: 0; }
+    .auth-card { padding: 24px 30px; overflow: hidden; }
+    .auth-header { margin-bottom: 12px; }
+    .brand-badge { width: 62px; height: 62px; margin-bottom: 8px; }
+    .auth-header h1 { font-size: 1.8rem; }
+    .auth-header p { margin-top: 5px; font-size: .86rem; }
+    .auth-form { gap: 8px; }
+    .auth-form input, .auth-form select { padding: 9px 11px; }
+    .primary-button { margin-top: 2px; padding: 10px 14px; }
+    .auth-footer { margin-top: 12px; }
+}
+
+@media (min-width: 901px) {
+    .auth-shell { padding: 10px; }
+    .auth-panel { width: min(660px, calc(100vw - 20px)); height: min(500px, calc(100dvh - 20px)); min-height: 0; }
+    .auth-illustration { min-height: 0; }
+    .auth-card { padding: 16px 20px; overflow: hidden; }
+    .auth-header { margin-bottom: 12px; }
+    .brand-badge { width: 48px; height: 48px; margin-bottom: 5px; }
+    .auth-header h1 { font-size: 1.45rem; }
+    .auth-header p { margin-top: 3px; font-size: .72rem; }
+    .auth-form { gap: 5px; }
+    .auth-form label { gap: 3px; font-size: .7rem; }
+    .auth-form input, .auth-form select { padding: 5px 8px; font-size: .72rem; }
+    .primary-button { margin-top: 2px; padding: 7px 11px; font-size: .75rem; }
+    .auth-footer { margin-top: 8px; font-size: .7rem; }
 }
 </style>

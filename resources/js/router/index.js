@@ -56,18 +56,8 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
     const publicPages = ['login', 'register', 'landing'];
 
-    // If user sudah login tetapi mencoba mengakses page publik, alihkan ke dashboard default (facilities)
-    if (publicPages.includes(to.name) && isAuthenticated()) {
-        // Jika mencoba ke landing, alihkan ke dashboard sesuai role
-        if (to.name === 'landing') {
-            // role based redirect
-            // Note: hasRole checks authUser role via token payload (already set in auth.js)
-            if (hasRole('admin')) return next({ name: 'admin' });
-            if (hasRole('officer')) return next({ name: 'officer' });
-            if (hasRole('user')) return next({ name: 'facilities' });
-            // fallback
-            return next({ name: 'facilities' });
-        }
+    // Landing tetap dapat dibuka setelah login agar pengguna bisa kembali ke halaman utama.
+    if (publicPages.includes(to.name) && isAuthenticated() && to.name !== 'landing') {
         return next({ name: 'facilities' });
     }
 
