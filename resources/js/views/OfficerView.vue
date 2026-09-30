@@ -35,8 +35,17 @@ const dialogTitle = computed(() => decision.value?.kind === 'report'
     : decision.value?.action === 'approve'
         ? 'Konfirmasi reservasi'
         : decision.value?.action === 'cancel'
-            ? 'Batalkan reservasi'
-            : 'Tolak reservasi');
+             ? 'Batalkan reservasi'
+             : 'Tolak reservasi');
+const noteLabel = computed(() => {
+    if (!decision.value) return 'Catatan (opsional)';
+    if (decision.value.kind === 'report') {
+        return decision.value.action === 'rejected' ? 'Alasan penolakan' : 'Catatan (opsional)';
+    }
+    if (decision.value.action === 'reject') return 'Catatan penolakan';
+    if (decision.value.action === 'cancel') return 'Alasan pembatalan';
+    return 'Catatan (opsional)';
+});
 const facilityLocation = facility => [
     facility.location?.name,
     facility.location?.building,
@@ -180,7 +189,7 @@ async function changeFacility(item) {
         <WorkflowDialog v-if="decision" :title="dialogTitle" :busy="saving" :submit-label="decision.kind === 'report' ? 'Simpan status' : decision.action === 'approve' ? 'Setujui reservasi' : decision.action === 'cancel' ? 'Batalkan reservasi' : 'Tolak reservasi'" @close="decision = null" @submit="submitDecision">
             <div class="wf-summary"><strong>{{ decision.item.facility?.name }}</strong><span>{{ decision.item.user?.name }}</span><span v-if="decision.kind === 'reservation'">{{ formatDate(decision.item.start_at) }} / {{ formatTime(decision.item.start_at) }} - {{ formatTime(decision.item.end_at) }} WIB</span><p>{{ decision.item.purpose || decision.item.description }}</p></div>
             <label v-if="decision.kind === 'report'">Status<select v-model="decision.action"><option v-if="decision.item.status === 'new'" value="in_progress">Diproses</option><option v-if="decision.item.status === 'new'" value="rejected">Ditolak</option><option v-if="decision.item.status === 'in_progress'" value="resolved">Selesai</option></select></label>
-            <label>Catatan {{ ['reject', 'cancel'].includes(decision.action) ? 'alasan' : '(opsional)' }}<textarea v-model="note" rows="3" maxlength="1000" :required="['reject', 'cancel'].includes(decision.action)" /></label>
+            <label>{{ noteLabel }}<textarea v-model="note" rows="3" maxlength="1000" :required="['reject', 'cancel'].includes(decision.action)" :placeholder="decision.action === 'reject' ? 'Jelaskan alasan penolakan' : decision.action === 'cancel' ? 'Jelaskan alasan pembatalan' : 'Tambahkan catatan bila diperlukan'" /></label>
             <p v-if="actionError" class="wf-notice wf-error" role="alert">{{ actionError }}</p>
         </WorkflowDialog>
     </section>

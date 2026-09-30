@@ -3,6 +3,9 @@
 import {
     computed,
     ref,
+    watch,
+    nextTick,
+    onMounted,
     onUnmounted
 } from "vue";
 
@@ -13,6 +16,7 @@ import {
 
 import axios from "axios";
 import { Building2, CalendarDays, ClipboardCheck, Wrench, Settings, ChevronLeft, ChevronRight, LogOut, Menu, X as CloseIcon } from 'lucide-vue-next';
+import BrandLogo from './BrandLogo.vue';
 
 import {
     clearAuthSession,
@@ -28,8 +32,11 @@ const route = useRoute();
 
 const collapsed = ref(false);
 const mobileOpen = ref(false);
-const showMobileClose = ref(false);
-let mobileAnimationTimer;
+const isMobile = ref(false);
+const mobileToggle = ref(null);
+const sidebarPanel = ref(null);
+let mobileQuery;
+let previousBodyOverflow = '';
 
 
 const user = authUser;
@@ -142,10 +149,11 @@ return route.name===name;
 
 }
 
-function closeMobile(){
-    window.clearTimeout(mobileAnimationTimer);
-    showMobileClose.value = false;
+function closeMobile(restoreFocus = true){
+    if (!mobileOpen.value) return;
     mobileOpen.value = false;
+    document.body.style.overflow = previousBodyOverflow;
+    if (restoreFocus && isMobile.value) nextTick(() => mobileToggle.value?.focus());
 }
 
 function toggleMobile(){
@@ -154,14 +162,45 @@ function toggleMobile(){
         return;
     }
 
+    collapsed.value = false;
+    previousBodyOverflow = document.body.style.overflow;
     mobileOpen.value = true;
-    window.clearTimeout(mobileAnimationTimer);
-    mobileAnimationTimer = window.setTimeout(() => {
-        showMobileClose.value = true;
-    }, 250);
+    document.body.style.overflow = 'hidden';
+    nextTick(() => sidebarPanel.value?.querySelector('a[href], button:not(.collapse)')?.focus());
 }
 
-onUnmounted(() => window.clearTimeout(mobileAnimationTimer));
+function handleKeydown(event){
+    if(event.key === 'Escape' && mobileOpen.value){
+        event.preventDefault();
+        closeMobile();
+        return;
+    }
+    if(event.key !== 'Tab' || !mobileOpen.value || !sidebarPanel.value) return;
+    const focusable = [...sidebarPanel.value.querySelectorAll('a[href], button:not([disabled])')];
+    if(!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if(event.shiftKey && document.activeElement === first){ event.preventDefault(); last.focus(); }
+    else if(!event.shiftKey && document.activeElement === last){ event.preventDefault(); first.focus(); }
+}
+
+function handleMobileChange(event){
+    isMobile.value = event.matches;
+    if(!event.matches) closeMobile(false);
+}
+
+watch(() => route.fullPath, () => closeMobile(false));
+onMounted(() => {
+    window.addEventListener('keydown', handleKeydown);
+    mobileQuery = window.matchMedia('(max-width: 900px)');
+    isMobile.value = mobileQuery.matches;
+    mobileQuery.addEventListener('change', handleMobileChange);
+});
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown);
+    mobileQuery?.removeEventListener('change', handleMobileChange);
+    document.body.style.overflow = previousBodyOverflow;
+});
 
 
 
@@ -170,11 +209,6 @@ onUnmounted(() => window.clearTimeout(mobileAnimationTimer));
 
 async function logout(){
 const token = getToken();
-clearAuthSession();
-await router.replace({
-    name:"landing"
-});
-
 
 try{
 
@@ -182,7 +216,8 @@ if(token){
     await axios.post("/api/logout", {}, {
         headers:{
             Authorization:`Bearer ${token}`
-        }
+        },
+        timeout:2500
     });
 }
 
@@ -195,6 +230,11 @@ console.warn(
 error
 );
 
+}
+
+finally{
+clearAuthSession();
+window.location.replace(router.resolve({ name:"landing" }).href);
 }
 
 
@@ -213,14 +253,17 @@ error
 
 
 <button
+ref="mobileToggle"
 class="mobile-sidebar-toggle"
 :class="{ 'is-open':mobileOpen }"
 type="button"
-title="Buka menu"
-aria-label="Buka menu"
+:title="mobileOpen ? 'Tutup menu' : 'Buka menu'"
+:aria-label="mobileOpen ? 'Tutup menu' : 'Buka menu'"
+:aria-expanded="mobileOpen"
+aria-controls="app-sidebar"
 @click="toggleMobile"
 >
-<Menu v-if="!showMobileClose" :size="21" />
+<Menu v-if="!mobileOpen" :size="21" />
 <CloseIcon v-else :size="21" />
 </button>
 
@@ -235,7 +278,12 @@ aria-hidden="true"
 
 <aside
 
+id="app-sidebar"
+ref="sidebarPanel"
 class="sidebar"
+aria-label="Navigasi utama"
+:aria-hidden="isMobile && !mobileOpen ? 'true' : undefined"
+:inert="isMobile && !mobileOpen"
 
 :class="{
 'is-collapsed':collapsed,
@@ -252,11 +300,7 @@ class="sidebar"
 <div class="brand">
 
 
-<div class="brand-logo">
-
-R
-
-</div>
+<BrandLogo mode="icon" :size="42" inverse />
 
 
 

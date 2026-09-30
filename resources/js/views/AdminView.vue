@@ -159,10 +159,14 @@ async function loadSummary(){
 
 
 
-const chart = computed(() => facilitySummary.value.slice(0, 7).map(facility => ({
-    day: facility.name.length > 12 ? `${facility.name.slice(0, 12)}...` : facility.name,
-    value: facility.usage || 0,
-})));
+const chart = computed(() => facilitySummary.value
+    .map(facility => ({
+        id: facility.id || facility.code || facility.name,
+        name: facility.name,
+        code: facility.code || 'Fasilitas',
+        value: Math.min(100, Math.max(0, Math.round(Number(facility.usage || 0) * 10) / 10)),
+    }))
+    .sort((a, b) => b.value - a.value));
 
 
 
@@ -194,6 +198,8 @@ const editing = ref(false);
 
 const saving = ref(false);
 const saveError = ref("");
+const statusBusy = ref(null);
+const actionNotice = ref("");
 
 
 
@@ -235,6 +241,12 @@ function facilityLocation(facility){
         facility.location?.building,
         facility.location?.floor ? `Lantai ${facility.location.floor}` : null,
     ].filter(Boolean).join(" · ");
+}
+
+function closeModal(){
+    if(saving.value) return;
+    modal.value=false;
+    saveError.value="";
 }
 
 
@@ -500,6 +512,9 @@ payload
 
 await loadFacilities();
 modal.value=false;
+actionNotice.value=editing.value
+    ? "Perubahan fasilitas berhasil disimpan."
+    : "Fasilitas baru berhasil ditambahkan.";
 }
 
 catch(error){
@@ -528,16 +543,22 @@ saving.value=false;
 
 
 async function toggleStatus(item){
+    if(statusBusy.value || item.status === "maintenance") return;
+    const target = item.status === "active" ? "nonaktif" : "aktif";
+    if(!window.confirm(`Ubah status ${item.name} menjadi ${target}?`)) return;
 
-
-await axios.patch(
-
-`/api/admin/facilities/${item.id}/toggle-status`
-
-);
-
-
-loadFacilities();
+    statusBusy.value=item.id;
+    saveError.value="";
+    actionNotice.value="";
+    try{
+        await axios.patch(`/api/admin/facilities/${item.id}/toggle-status`);
+        actionNotice.value=`Status ${item.name} berhasil diperbarui.`;
+        await loadFacilities();
+    } catch(error){
+        saveError.value=error?.response?.data?.message || "Status fasilitas gagal diperbarui. Coba lagi.";
+    } finally{
+        statusBusy.value=null;
+    }
 
 
 }
@@ -650,22 +671,16 @@ id="screen-admin"
 
 <p class="eyebrow">
 
-ADMIN CONTROL
+RUANGKITA / ADMIN
 
 </p>
 
 
 <h1>
 
-Analytics Center
+Pusat analitik
 
-<span class="sun">
-
-<p v-if="saveError" class="admin-feedback error-box">
-{{saveError}}
-</p>
-✦
-</span>
+<span class="sun" aria-hidden="true">✦</span>
 
 
 </h1>
@@ -721,11 +736,11 @@ v-for="p in periods"
 <!-- KPI -->
 
 
-<div class="stat-grid">
+<p v-if="actionNotice" class="admin-feedback success-box" role="status">{{actionNotice}}</p>
+<p v-if="saveError && !modal" class="admin-feedback error-box" role="alert">{{saveError}}</p>
+<p v-if="summaryError" class="admin-feedback error-box" role="alert">{{summaryError}}</p>
 
-<p v-if="summaryError" class="admin-feedback error-box">
-{{summaryError}}
-</p>
+<div class="stat-grid" :aria-busy="summaryLoading">
 
 
 <article
@@ -735,6 +750,8 @@ v-for="item in kpi"
 :key="item.title"
 
 class="stat-card"
+
+:class="`is-${item.type}`"
 
 >
 
@@ -768,7 +785,7 @@ item.type
 
 <strong>
 
-{{item.value}}
+{{summaryLoading ? '—' : item.value}}
 
 </strong>
 
@@ -809,52 +826,29 @@ item.type
 
 
 <h2>
-Usage Analytics
+Analitik penggunaan
 </h2>
 
 
 <p>
-Reservasi mingguan
+Persentase pemakaian per fasilitas
 </p>
 
 
 
 
-<div class="chart">
-
-
-<div
-
-v-for="c in chart"
-
-:key="c.day"
-
-class="bar-wrapper"
-
->
-
-
-<div
-
-class="bar"
-
-:style="{
-height:c.value+'%'
-}"
-
-></div>
-
-
-<span>
-
-{{c.day}}
-
-</span>
-
-
-</div>
-
-
+<div v-if="summaryLoading" class="chart-state" role="status">Memuat analitik penggunaan...</div>
+<div v-else-if="!chart.length" class="chart-state">Belum ada data penggunaan pada periode ini.</div>
+<div v-else class="usage-chart" aria-label="Grafik utilisasi fasilitas">
+    <article v-for="c in chart" :key="c.id" class="usage-row">
+        <div class="usage-row__header">
+            <div><strong>{{c.name}}</strong><small>{{c.code}}</small></div>
+            <span>{{c.value.toLocaleString('id-ID')}}%</span>
+        </div>
+        <div class="usage-track" role="progressbar" :aria-label="`Utilisasi ${c.name}`" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="c.value">
+            <span class="usage-fill" :style="{ width: (c.value > 0 ? Math.max(c.value, 3) : 0) + '%' }"></span>
+        </div>
+    </article>
 </div>
 
 
@@ -874,7 +868,7 @@ height:c.value+'%'
 
 
 <h2>
-Activity Log
+Aktivitas terbaru
 </h2>
 
 
@@ -918,7 +912,7 @@ class="export"
 
 >
 
-⬇ Export Report
+Unduh rekap
 
 </button>
 
@@ -951,7 +945,7 @@ class="export"
 
 
 <h2>
-Facility Management
+Manajemen fasilitas
 </h2>
 
 
@@ -970,7 +964,7 @@ CRUD fasilitas kampus
 
 >
 
-＋ Add Facility
+Tambah fasilitas
 
 </button>
 
@@ -995,7 +989,7 @@ Memuat data fasilitas...
 </p>
 
 <div v-else-if="!facilities.length" class="admin-feedback">
-Belum ada fasilitas. Tambahkan fasilitas pertama melalui tombol Add Facility.
+Belum ada fasilitas. Tambahkan fasilitas pertama melalui tombol Tambah fasilitas.
 </div>
 
 
@@ -1050,7 +1044,7 @@ class="facility-row"
 
 
 
-<div>
+<div class="facility-actions">
 
 
 <button
@@ -1069,11 +1063,11 @@ Edit
 
 @click="toggleStatus(f)"
 
-:disabled="f.status === 'maintenance'"
+:disabled="f.status === 'maintenance' || statusBusy === f.id"
 
 >
 
-{{f.status === 'maintenance' ? 'Petugas' : 'Toggle'}}
+{{statusBusy === f.id ? 'Menyimpan...' : f.status === 'maintenance' ? 'Dikelola petugas' : f.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}}
 
 </button>
 
@@ -1110,54 +1104,61 @@ v-if="modal"
 
 class="overlay"
 
-@click.self="modal=false"
+@click.self="closeModal"
+
+@keydown.esc="closeModal"
 
 >
 
 
-<div class="modal">
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="facility-dialog-title">
 
 
-<h2>
+<h2 id="facility-dialog-title">
 
-{{editing?'Edit':'Tambah'}}
-
-Facility
+{{editing?'Edit':'Tambah'}} fasilitas
 
 </h2>
 
+<button type="button" class="modal-close" aria-label="Tutup" title="Tutup" :disabled="saving" @click="closeModal">×</button>
 
 
 
 
-<input
+
+<label class="modal-field"><span>Kode fasilitas</span><input
 
 v-model="form.code"
 
-placeholder="Code"
+aria-label="Kode fasilitas"
+
+placeholder="Contoh: RKU-101"
 
 required
 
-/>
+ /></label>
 
 
 
-<input
+<label class="modal-field"><span>Nama fasilitas</span><input
 
 v-model="form.name"
 
-placeholder="Name"
+aria-label="Nama fasilitas"
+
+placeholder="Nama fasilitas"
 
 required
 
-/>
+ /></label>
 
 
 
 
 
-<select
+<label class="modal-field"><span>Tipe fasilitas</span><select
 v-model="form.facility_type_id"
+aria-label="Tipe fasilitas"
 required
 >
 <option value="" disabled>Pilih tipe fasilitas</option>
@@ -1168,10 +1169,11 @@ v-for="t in types"
 >
 {{t.name}}
 </option>
-</select>
+</select></label>
 
-<select
+<label class="modal-field"><span>Lokasi fasilitas</span><select
 v-model="form.location_id"
+aria-label="Lokasi fasilitas"
 required
 >
 <option value="" disabled>Pilih lokasi</option>
@@ -1182,35 +1184,41 @@ v-for="location in locations"
 >
 {{location.name}} · {{location.building}} · Lantai {{location.floor}}
 </option>
-</select>
+</select></label>
 
-<textarea
+<label class="modal-field"><span>Deskripsi <small>(opsional)</small></span><textarea
 v-model="form.description"
+aria-label="Deskripsi fasilitas"
 placeholder="Deskripsi fasilitas"
 rows="3"
-></textarea>
+></textarea></label>
 
 
 
 
 
 
-<input
+<label class="modal-field"><span>Kapasitas</span><input
 
 type="number"
 
 v-model="form.capacity"
 
-placeholder="Capacity"
+aria-label="Kapasitas fasilitas"
+
+placeholder="Kapasitas"
 
 min="1"
 
 required
 
-/>
+ /></label>
 
 
 
+
+<p class="modal-helper">Kode, nama, tipe, lokasi, dan kapasitas wajib diisi.</p>
+<p v-if="saveError" class="admin-feedback error-box" role="alert">{{saveError}}</p>
 
 <div class="modal-action">
 
@@ -1219,11 +1227,11 @@ required
 
 type="button"
 
-@click="modal=false"
+@click="closeModal"
 
 >
 
-Cancel
+Batal
 
 </button>
 
@@ -1238,7 +1246,7 @@ type="button"
 
 >
 
-{{saving?'Saving':'Save'}}
+{{saving?'Menyimpan...':'Simpan'}}
 
 </button>
 
@@ -1688,6 +1696,8 @@ place-items:center;
 
 z-index:999;
 
+padding:16px;
+
 
 }
 
@@ -1698,14 +1708,20 @@ z-index:999;
 
 background:white;
 
+position:relative;
 
-width:400px;
+
+width:min(480px, 100%);
+
+max-height:calc(100dvh - 32px);
+
+overflow-y:auto;
 
 
 padding:30px;
 
 
-border-radius:25px;
+border-radius:16px;
 
 
 display:grid;
@@ -1714,6 +1730,26 @@ display:grid;
 gap:15px;
 
 
+}
+
+.modal-close{
+    position:absolute;
+    top:18px;
+    right:18px;
+    display:grid;
+    width:36px;
+    height:36px;
+    place-items:center;
+    border:1px solid var(--slate-300);
+    border-radius:8px;
+    background:#fff;
+    color:var(--slate-700);
+    font-size:22px;
+    line-height:1;
+}
+
+.modal h2{
+    padding-right:44px;
 }
 
 
@@ -1732,6 +1768,35 @@ border-radius:12px;
 border:1px solid #ddd;
 
 
+}
+
+.modal-field{
+    display:grid;
+    gap:7px;
+    color:var(--slate-700);
+    font-size:13px;
+    font-weight:700;
+}
+
+.modal-field small{
+    font-weight:500;
+}
+
+.modal-field input,
+.modal-field select,
+.modal-field textarea{
+    width:100%;
+    min-width:0;
+    color:var(--slate-900);
+    font:inherit;
+    font-weight:400;
+}
+
+.modal-helper{
+    margin:0;
+    color:var(--slate-600);
+    font-size:12px;
+    line-height:1.5;
 }
 
 
@@ -1776,6 +1841,20 @@ color:white;
     border-color:#fecaca;
     background:#fef2f2;
     color:var(--danger);
+}
+
+.admin-feedback.success-box{
+    margin-bottom:16px;
+    border-style:solid;
+    border-color:#bbf7d0;
+    background:#f0fdf4;
+    color:#166534;
+}
+
+.modal :focus-visible,
+#screen-admin button:focus-visible{
+    outline:3px solid var(--blue-200);
+    outline-offset:2px;
 }
 
  
@@ -1864,15 +1943,15 @@ gap:10px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
 }
 
-#screen-admin .stat-card:first-of-type {
+#screen-admin .stat-card.is-blue {
     border-color: #2563eb;
     background: #2563eb;
     color: #fff;
 }
 
-#screen-admin .stat-card:first-of-type span,
-#screen-admin .stat-card:first-of-type small,
-#screen-admin .stat-card:first-of-type strong {
+#screen-admin .stat-card.is-blue span,
+#screen-admin .stat-card.is-blue small,
+#screen-admin .stat-card.is-blue strong {
     color: #fff;
 }
 
@@ -1917,7 +1996,7 @@ gap:10px;
 
 #screen-admin .panel > p,
 #screen-admin .panel-header p {
-    color: #94a3b8;
+    color: #64748b;
     font-size: 11px;
 }
 
@@ -1927,6 +2006,99 @@ gap:10px;
     padding: 14px 8px 0;
     border-top: 1px dashed #e2e8f0;
     background: repeating-linear-gradient(to bottom, transparent 0 38px, #f1f5f9 39px 40px);
+}
+
+#screen-admin .usage-chart {
+    display:grid;
+    gap:16px;
+    max-height:320px;
+    margin-top:22px;
+    padding-right:6px;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-gutter:stable;
+}
+
+#screen-admin .usage-chart::-webkit-scrollbar { width:6px; }
+#screen-admin .usage-chart::-webkit-scrollbar-track { background:transparent; }
+#screen-admin .usage-chart::-webkit-scrollbar-thumb { border-radius:999px; background:var(--slate-300); }
+#screen-admin .usage-chart::-webkit-scrollbar-thumb:hover { background:var(--slate-400); }
+
+#screen-admin .usage-row {
+    display:grid;
+    gap:8px;
+}
+
+#screen-admin .usage-row__header {
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+}
+
+#screen-admin .usage-row__header > div {
+    min-width:0;
+}
+
+#screen-admin .usage-row__header strong,
+#screen-admin .usage-row__header small {
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+#screen-admin .usage-row__header strong {
+    color:var(--slate-800);
+    font-size:13px;
+}
+
+#screen-admin .usage-row__header small {
+    margin-top:2px;
+    color:var(--slate-500);
+    font-size:10px;
+}
+
+#screen-admin .usage-row__header > span {
+    flex-shrink:0;
+    min-width:48px;
+    padding:3px 8px;
+    border-radius:999px;
+    background:var(--blue-50);
+    color:var(--blue-800);
+    font-size:11px;
+    font-weight:800;
+    text-align:center;
+}
+
+#screen-admin .usage-track {
+    height:10px;
+    overflow:hidden;
+    border:1px solid var(--blue-100);
+    border-radius:999px;
+    background:var(--slate-100);
+}
+
+#screen-admin .usage-fill {
+    display:block;
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg, var(--blue-600), var(--blue-400));
+    box-shadow:0 0 12px rgba(37,99,235,.24);
+    transition:width .35s ease;
+}
+
+#screen-admin .chart-state {
+    display:grid;
+    min-height:220px;
+    place-items:center;
+    margin-top:18px;
+    border:1px dashed var(--slate-300);
+    border-radius:12px;
+    background:var(--slate-50);
+    color:var(--slate-600);
+    font-size:13px;
+    text-align:center;
 }
 
 #screen-admin .bar-wrapper {
@@ -1966,5 +2138,211 @@ gap:10px;
     #screen-admin .intro-row { align-items: flex-start; flex-direction: column; }
     #screen-admin .admin-grid { grid-template-columns: 1fr; }
     #screen-admin .facility-panel { grid-column: auto; }
+    .modal { padding:22px 18px; }
+    .modal-action { flex-direction:column-reverse; }
+    .modal-action button { width:100%; min-height:42px; }
+}
+
+/* Final admin layout contract. */
+.content-wrap#screen-admin {
+    width:min(100%, 1320px);
+    padding:32px clamp(20px, 3vw, 40px) 56px;
+}
+
+#screen-admin .intro-row {
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:20px;
+    margin-bottom:24px;
+}
+
+#screen-admin h1 {
+    margin:5px 0 0;
+    font-size:clamp(28px, 3vw, 38px);
+    line-height:1.15;
+    letter-spacing:-1.2px;
+}
+
+#screen-admin .period {
+    flex-shrink:0;
+    gap:2px;
+    padding:4px;
+}
+
+#screen-admin .period button {
+    min-height:36px;
+    padding:7px 12px;
+    border:0;
+    background:transparent;
+    white-space:nowrap;
+}
+
+#screen-admin .stat-grid {
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:14px;
+    margin:0 0 18px;
+}
+
+#screen-admin .stat-card {
+    display:flex;
+    min-width:0;
+    min-height:112px;
+    align-items:center;
+    gap:14px;
+    padding:18px;
+    border:1px solid var(--slate-200);
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 8px 24px rgba(15,23,42,.05);
+}
+
+#screen-admin .stat-card > div:last-child {
+    min-width:0;
+}
+
+#screen-admin .stat-card > div:last-child span {
+    display:block;
+    overflow-wrap:anywhere;
+}
+
+.app-shell #screen-admin .stat-card.is-blue,
+.app-shell #screen-admin .stat-card.is-blue .stat-icon,
+.app-shell #screen-admin .stat-card.is-blue > div:last-child span,
+.app-shell #screen-admin .stat-card.is-blue > div:last-child strong,
+.app-shell #screen-admin .stat-card.is-blue > div:last-child small {
+    color:#fff;
+}
+
+#screen-admin .admin-grid {
+    display:grid;
+    grid-template-columns:minmax(0, 1.55fr) minmax(280px, .75fr);
+    column-gap:20px;
+    row-gap:24px;
+    margin:0;
+}
+
+#screen-admin .panel {
+    min-width:0;
+    padding:20px;
+    border:1px solid var(--slate-200);
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 8px 24px rgba(15,23,42,.04);
+}
+
+#screen-admin .chart {
+    width:100%;
+    min-width:0;
+    height:220px;
+    gap:10px;
+    overflow:hidden;
+}
+
+#screen-admin .bar-wrapper span {
+    max-width:100%;
+    overflow:hidden;
+    color:var(--slate-600);
+    font-size:10px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+#screen-admin .panel-header {
+    gap:16px;
+    margin-bottom:12px;
+}
+
+#screen-admin .panel-header button,
+#screen-admin .facility-actions button {
+    min-height:38px;
+    padding:8px 13px;
+    border:1px solid var(--slate-300);
+    border-radius:8px;
+    background:#fff;
+    color:var(--slate-700);
+    font:inherit;
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+#screen-admin .panel-header button {
+    border-color:var(--blue-600);
+    background:var(--blue-600);
+    color:#fff;
+}
+
+#screen-admin .facility-table {
+    min-width:0;
+}
+
+#screen-admin .facility-row {
+    display:grid;
+    grid-template-columns:minmax(220px, 1.7fr) minmax(90px, .45fr) minmax(90px, .45fr) auto;
+    align-items:center;
+    gap:16px;
+    padding:16px 0;
+}
+
+#screen-admin .facility-row > * {
+    min-width:0;
+}
+
+#screen-admin .facility-row small {
+    display:block;
+    overflow-wrap:anywhere;
+    color:var(--slate-600);
+}
+
+#screen-admin .facility-row b {
+    justify-self:start;
+    white-space:nowrap;
+}
+
+#screen-admin .facility-actions {
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+}
+
+#screen-admin .facility-actions button:last-child {
+    border-color:#fecaca;
+    color:#b91c1c;
+}
+
+@media (max-width:1000px) {
+    #screen-admin .stat-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    #screen-admin .admin-grid { grid-template-columns:1fr; row-gap:18px; }
+    #screen-admin .facility-panel { grid-column:auto; }
+}
+
+@media (max-width:720px) {
+    .content-wrap#screen-admin { padding:24px 16px 40px; }
+    #screen-admin .intro-row { align-items:flex-start; flex-direction:column; margin-bottom:18px; }
+    #screen-admin .period { width:100%; overflow:hidden; }
+    #screen-admin .period button { min-width:0; flex:1; }
+    #screen-admin .stat-grid { gap:10px; }
+    #screen-admin .stat-card { min-height:100px; padding:14px; gap:10px; }
+    #screen-admin .panel { padding:16px; }
+    #screen-admin .chart { height:190px; }
+    #screen-admin .usage-chart { max-height:280px; }
+    #screen-admin .panel-header { align-items:flex-start; }
+    #screen-admin .facility-row {
+        grid-template-columns:minmax(0, 1fr) auto;
+        gap:10px 14px;
+        padding:16px 0;
+    }
+    #screen-admin .facility-row > div:first-child { grid-column:1 / -1; }
+    #screen-admin .facility-actions { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; }
+    #screen-admin .facility-actions button { width:100%; }
+}
+
+@media (max-width:420px) {
+    #screen-admin .stat-grid { grid-template-columns:1fr; }
+    #screen-admin .stat-card { min-height:88px; }
+    #screen-admin .panel-header { flex-direction:column; }
+    #screen-admin .panel-header button { width:100%; }
 }
 </style>

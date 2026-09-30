@@ -1,4 +1,5 @@
 import './bootstrap';
+import '../css/ui-refresh.css';
 
 import { createApp } from 'vue';
 
