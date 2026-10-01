@@ -3,9 +3,10 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { Activity, Building2, CalendarDays, CheckCheck, Clock3, Inbox, Plus, RefreshCw, Search, X } from 'lucide-vue-next';
-import WorkflowDialog from '../components/WorkflowDialog.vue';
+import WorkflowDialog from '../components/ui/WorkflowDialog.vue';
 import { apiError, useLiveCollection } from '../composables/useLiveCollection';
 import { campusToday, formatDate, formatTime, statusLabel } from '../utils/reservations';
+import notification from '../components/notification/notificationService';
 import '../../css/workflow.css';
 
 const route = useRoute();
@@ -16,7 +17,6 @@ const filter = ref('all');
 const showModal = ref(false);
 const saving = ref(false);
 const formError = ref('');
-const notice = ref('');
 const selectedDate = ref(campusToday());
 const cancelItem = ref(null);
 const reason = ref('');
@@ -124,7 +124,6 @@ function handleManualTimeChange() {
 
 function openBooking() {
     formError.value = '';
-    notice.value = '';
     if (!form.value.facility_id && facilities.value.length) form.value.facility_id = facilities.value[0].id;
     showModal.value = true;
 }
@@ -200,7 +199,7 @@ async function createReservation() {
         clearSlotSelection();
         filter.value = 'pending';
         search.value = '';
-        notice.value = `Reservasi REQ-${String(response.data.data.id).padStart(4, '0')} tersimpan. Menunggu konfirmasi petugas.`;
+        notification.success(`Reservasi REQ-${String(response.data.data.id).padStart(4, '0')} tersimpan. Menunggu konfirmasi petugas.`);
         await refresh();
     } catch (failure) {
         formError.value = apiError(failure);
@@ -222,7 +221,7 @@ async function cancelReservation() {
     try {
         await axios.post(`/api/reservations/${cancelItem.value.id}/cancel`, { reason: reason.value.trim() });
         cancelItem.value = null;
-        notice.value = 'Reservasi berhasil dibatalkan.';
+        notification.success('Reservasi berhasil dibatalkan.');
         await refresh();
     } catch (failure) {
         formError.value = apiError(failure);
@@ -247,7 +246,6 @@ async function cancelReservation() {
             <div class="wf-metric"><CheckCheck :size="26" /><div><strong>{{ approvedCount }}</strong><span>Disetujui</span></div></div>
             <div class="wf-metric"><CalendarDays :size="26" /><div><strong>{{ bookedHours }}</strong><span>Total jam disetujui</span></div></div>
         </div>
-        <p v-if="notice" class="wf-notice" role="status">{{ notice }}</p>
         <p v-if="error" class="wf-notice wf-error" role="alert">{{ error }}</p>
         <div class="wf-section-head"><h2>Riwayat reservasi</h2><span class="wf-reference">{{ reservations.length }} reservasi</span></div>
         <div class="wf-toolbar">

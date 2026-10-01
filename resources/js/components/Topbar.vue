@@ -4,14 +4,15 @@ import { useRoute, useRouter } from 'vue-router';
 import { LogIn, LogOut } from 'lucide-vue-next';
 import axios from 'axios';
 import { authUser, clearAuthSession, getToken } from '../auth';
-import BrandLogo from './BrandLogo.vue';
+import BrandLogo from './common/BrandLogo.vue';
+import notification from './notification/notificationService';
 
 const route = useRoute();
 const router = useRouter();
 const signingOut = ref(false);
 const title = computed(() => route.meta.title || 'RuangKita');
 
-async function logout() {
+async function performLogout() {
     if (signingOut.value) return;
     signingOut.value = true;
     const token = getToken();
@@ -30,6 +31,17 @@ async function logout() {
         window.location.replace(router.resolve({ name: 'landing' }).href);
     }
 }
+
+function logout() {
+    if (signingOut.value) return;
+    notification.confirm({
+        title: 'Keluar dari akun?',
+        message: 'Sesi Anda akan diakhiri dan halaman akan kembali ke beranda.',
+        confirmLabel: 'Ya, keluar',
+        tone: 'danger',
+        onConfirm: performLogout,
+    });
+}
 </script>
 
 <template>
@@ -38,7 +50,7 @@ async function logout() {
         <div class="topbar-location"><span>Workspace</span><span aria-hidden="true">/</span><strong>{{ title }}</strong></div>
         <div class="topbar-account">
             <span v-if="authUser" class="account-name">{{ authUser.name }}</span>
-            <button v-if="authUser" type="button" title="Keluar" aria-label="Keluar" :disabled="signingOut" @click="logout().catch(() => {})"><LogOut :size="18" /></button>
+            <button v-if="authUser" type="button" title="Keluar" aria-label="Keluar" :disabled="signingOut" @click="logout"><LogOut :size="18" /></button>
             <RouterLink v-else :to="{ name: 'login' }"><LogIn :size="17" /> Login</RouterLink>
         </div>
     </header>

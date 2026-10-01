@@ -11,6 +11,8 @@ import {
 
 import AppSidebar from "../components/AppSidebar.vue";
 import Topbar from "../components/Topbar.vue";
+import ToastNotification from "../components/notification/ToastNotification.vue";
+import ConfirmDialog from "../components/notification/ConfirmDialog.vue";
 
 
 const route = useRoute();
@@ -174,6 +176,9 @@ mode="out-in"
 
 
 </div>
+
+<ToastNotification />
+<ConfirmDialog />
 
 
 

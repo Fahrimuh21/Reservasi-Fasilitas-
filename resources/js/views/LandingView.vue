@@ -21,8 +21,11 @@ import mascotImage from '../../asset/Makot.png'
 import {
   useLiveCollection
 } from '../composables/useLiveCollection'
+import { useScrollReveal } from '../composables/useScrollReveal'
 
-import BrandLogo from '../components/BrandLogo.vue'
+import BrandLogo from '../components/common/BrandLogo.vue'
+import LandingAboutFeatures from '../components/sections/LandingAboutFeatures.vue'
+import LandingJourneySection from '../components/sections/LandingJourneySection.vue'
 
 
 import {
@@ -41,11 +44,7 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
-  Mail,
-  Phone,
-  Globe,
   Sparkles,
-  MousePointerClick,
   FileText,
   Send,
   Eye
@@ -66,9 +65,7 @@ const activeSection = ref('beranda')
 
 const isScrolled = ref(false)
 
-const visibleSections = ref(new Set())
-
-let observer
+const { refresh: refreshReveal } = useScrollReveal()
 
 
 
@@ -639,6 +636,8 @@ const facilities = computed(()=>{
 
 })
 
+watch(facilities, refreshReveal, { flush: 'post' })
+
 
 
 
@@ -827,18 +826,6 @@ block:'start'
 
 
 
-const isVisible = (id)=>{
-
-return visibleSections.value.has(id)
-
-}
-
-
-
-
-
-
-
 /* =========================
 SCROLL OBSERVER
 ========================= */
@@ -907,60 +894,6 @@ passive:true
 
 
 
-observer = new IntersectionObserver(
-
-entries=>{
-
-
-entries.forEach(entry=>{
-
-
-if(entry.isIntersecting){
-
-visibleSections.value.add(
-entry.target.id
-)
-
-}
-
-
-})
-
-
-},
-
-{
-threshold:0.15
-}
-
-)
-
-
-
-
-
-setTimeout(()=>{
-
-
-document
-
-.querySelectorAll(
-'[data-animate]'
-)
-
-.forEach(element=>{
-
-
-observer.observe(element)
-
-
-})
-
-
-},100)
-
-
-
 })
 
 
@@ -983,13 +916,6 @@ window.removeEventListener('resize', handleResize)
 window.removeEventListener('keydown', handleMenuKeydown)
 document.body.classList.remove('landing-menu-open')
 
-
-
-if(observer){
-
-observer.disconnect()
-
-}
 
 
 })
@@ -1027,9 +953,9 @@ observer.disconnect()
     </header>
 
     <main>
-      <section id="beranda" class="hero-section" data-animate>
-        <div class="hero-copy" :class="{ 'is-visible': isVisible('beranda') }">
-          <span class="eyebrow">PLATFORM RESERVASI KAMPUS</span>
+      <section id="beranda" class="hero-section">
+        <div class="hero-copy" data-reveal="left">
+          <span class="eyebrow"><Sparkles :size="14" /> PLATFORM RESERVASI KAMPUS</span>
           <h1>Kelola fasilitas kampus lebih mudah.</h1>
           <p>Reservasi ruang, pantau ketersediaan, dan laporkan kerusakan dalam satu platform digital untuk civitas akademika.</p>
           <div class="hero-actions">
@@ -1041,7 +967,7 @@ observer.disconnect()
             <span><strong>{{ facilitiesUpdatedAt ? 'LIVE' : '...' }}</strong> ketersediaan</span>
           </div>
         </div>
-        <div class="hero-visual">
+        <div class="hero-visual" data-reveal="right">
           <img :src="campusImage" alt="Kampus Universitas Diponegoro" />
           <div class="hero-overlay"></div>
           <div class="hero-float"><Clock :size="16" /><span>{{ facilityAvailabilityText }}</span></div>
@@ -1049,8 +975,10 @@ observer.disconnect()
         </div>
       </section>
 
-      <section id="fasilitas" class="section-block" data-animate>
-        <div class="section-heading">
+      <LandingAboutFeatures :image="campusImage" :features="features" />
+
+      <section id="fasilitas" class="section-block">
+        <div class="section-heading" data-reveal="up">
           <span class="eyebrow">KATALOG FASILITAS</span>
           <h2>Ruang yang siap digunakan</h2>
           <p>Data fasilitas dan slot diperbarui otomatis dari sistem reservasi.</p>
@@ -1059,7 +987,7 @@ observer.disconnect()
         <div v-else-if="facilitiesLoading" class="notice">Memuat fasilitas...</div>
         <div v-else-if="!facilities.length" class="notice">Belum ada fasilitas aktif.</div>
         <div v-else class="facility-grid">
-          <article v-for="facility in facilities" :key="facility.id" class="facility-card">
+          <article v-for="(facility, index) in facilities" :key="facility.id" class="facility-card" data-reveal="up" :style="{ '--reveal-delay': `${index * 70}ms` }">
             <div class="facility-banner" :class="`bg-gradient-to-br ${facility.gradient}`"><span>{{ facility.icon }}</span><b><CheckCircle :size="13" /> {{ facility.status }}</b></div>
             <div class="facility-body">
               <h3>{{ facility.name }}</h3>
@@ -1072,8 +1000,8 @@ observer.disconnect()
         </div>
       </section>
 
-      <section id="ketersediaan" class="availability-section" data-animate>
-        <div class="availability-panel">
+      <section id="ketersediaan" class="availability-section">
+        <div class="availability-panel" data-reveal="up">
           <div class="calendar-panel">
             <div class="calendar-header"><button type="button" aria-label="Bulan sebelumnya" @click="prevMonth"><ChevronLeft :size="18" /></button><strong>{{ monthNames[currentCalendarMonth] }} {{ currentCalendarYear }}</strong><button type="button" aria-label="Bulan berikutnya" @click="nextMonth"><ChevronRight :size="18" /></button></div>
             <div class="calendar-days"><span v-for="day in dayLabels" :key="day">{{ day }}</span></div>
@@ -1093,10 +1021,12 @@ observer.disconnect()
         </div>
       </section>
 
-      <section class="cta-section"><div><span class="eyebrow">RUANGKITA</span><h2>Siap memakai fasilitas kampus?</h2><p>Masuk untuk mengajukan reservasi dan mengelola aktivitas Anda.</p><RouterLink :to="{ name: 'login' }" class="primary-button">Mulai sekarang <ArrowRight :size="17" /></RouterLink></div></section>
+      <LandingJourneySection :steps="steps" />
+
+      <section class="cta-section"><div data-reveal="up"><span class="eyebrow">RUANGKITA</span><h2>Siap memakai fasilitas kampus?</h2><p>Masuk untuk mengajukan reservasi dan mengelola aktivitas Anda.</p><RouterLink :to="{ name: 'login' }" class="primary-button">Mulai sekarang <ArrowRight :size="17" /></RouterLink></div></section>
     </main>
 
-    <footer class="landing-footer">
+    <footer class="landing-footer" data-reveal="up">
       <div class="footer-main">
         <div class="footer-brand">
           <BrandLogo :size="38" />
@@ -1142,14 +1072,14 @@ observer.disconnect()
 .landing-links a.active { color: var(--blue); font-weight: 600; }
 .primary-button, .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 8px; font-weight: 600; text-decoration: none; }
 .primary-button { border: 1px solid var(--blue); background: var(--blue); color: #fff; box-shadow: 0 10px 22px rgba(37,99,235,.2); }
-.primary-button:hover { background: var(--blue-dark); }
+.primary-button:hover { background: var(--blue-dark); transform: translateY(-2px); box-shadow: 0 14px 26px rgba(37,99,235,.25); }
 .secondary-button { border: 1px solid #bfdbfe; background: #fff; color: var(--blue); }
 .menu-button, .calendar-header button { display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
 .menu-button { display: none; width: 44px; height: 44px; flex: 0 0 44px; }
 .mobile-nav, .mobile-nav-overlay { display: none; }
 .hero-section, .section-block, .availability-section { max-width: 1180px; margin: auto; padding: 96px 24px; }
 .hero-section { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 64px; min-height: 680px; }
-.hero-copy, .hero-visual { animation: rise .65s ease both; }
+.hero-copy, .hero-visual { will-change: transform, opacity; }
 .eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--blue); font-size: 11px; font-weight: 600; letter-spacing: .11em; }
 h1, h2, h3, p { margin-top: 0; }
 h1 { max-width: 600px; margin-bottom: 20px; font-size: clamp(40px, 5vw, 64px); font-weight: 700; line-height: 1.08; letter-spacing: -.04em; overflow-wrap: normal; word-break: normal; }
@@ -1163,7 +1093,7 @@ h2 { font-size: clamp(30px, 4vw, 44px); font-weight: 700; line-height: 1.14; let
 .hero-visual > img:first-child { width: 100%; height: 100%; min-height: 480px; object-fit: cover; display: block; }
 .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(15,23,42,.72)); }
 .hero-float { position: absolute; left: 22px; bottom: 22px; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 44px); padding: 13px 16px; border: 1px solid rgba(255,255,255,.5); border-radius: 10px; background: rgba(255,255,255,.92); color: var(--blue); font-size: 12px; font-weight: 600; }
-.mascot { position: absolute; top: 20px; right: 20px; width: 72px; height: 72px; border: 3px solid #fff; border-radius: 50%; object-fit: cover; }
+.mascot { position: absolute; top: 20px; right: 20px; width: 72px; height: 72px; border: 3px solid #fff; border-radius: 50%; object-fit: cover; animation: mascot-float 4s ease-in-out infinite; }
 .section-block { background: #fff; max-width: none; padding-left: max(24px, calc((100% - 1132px) / 2)); padding-right: max(24px, calc((100% - 1132px) / 2)); }
 .section-heading { margin-bottom: 36px; }
 .facility-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 290px)); justify-content: center; gap: 18px; }
@@ -1183,14 +1113,10 @@ h2 { font-size: clamp(30px, 4vw, 44px); font-weight: 700; line-height: 1.14; let
 .footer-column a, .footer-column span { color: var(--muted); font-size: 12px; text-decoration: none; }
 .footer-column a:hover { color: var(--blue); }
 .footer-bottom { display: flex; justify-content: space-between; gap: 16px; padding-top: 20px; border-top: 1px solid var(--line); color: #64748b; font-size: 11px; }
-.calendar-grid button { display: grid; place-items: center; min-width: 0; aspect-ratio: 1; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
-.calendar-grid button:disabled { cursor: default; }
-.calendar-grid .available { background: #dcfce7; color: #15803d; }
-.calendar-grid .booked { background: #fee2e2; color: #b91c1c; }
-.calendar-grid .today { box-shadow: inset 0 0 0 1px var(--blue); }
-.calendar-grid .selected { outline: 2px solid var(--blue); outline-offset: 1px; }
-.sync-status.is-error { color: #b91c1c !important; }
-@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+[data-reveal] { opacity: 0; transform: translateY(20px); transition: opacity .55s ease var(--reveal-delay,0ms), transform .55s ease var(--reveal-delay,0ms); }
+[data-reveal="left"], [data-reveal="right"] { transform: translateY(20px); }
+[data-reveal].is-revealed { opacity: 1; transform: translate(0); }
+@keyframes mascot-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 @media (max-width: 900px) { .hero-section, .availability-panel { grid-template-columns: 1fr; gap: 36px; }.hero-section { padding-top: 72px; }.hero-visual { min-height: 360px; }.hero-visual > img:first-child { min-height: 360px; }.facility-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 290px)); }.footer-main { grid-template-columns: 1.4fr repeat(2, 1fr); }.footer-contact { grid-column: 2 / -1; } }
 @media (max-width: 840px) {
   .landing-links, .landing-actions { display: none; }
@@ -1207,4 +1133,5 @@ h2 { font-size: clamp(30px, 4vw, 44px); font-weight: 700; line-height: 1.14; let
 }
 @media (max-width: 560px) { .landing-header { padding: 8px 10px 0; }.landing-nav { min-height: 60px; padding: 7px 10px; }.hero-section, .section-block, .availability-section { padding: 56px 16px; }.hero-section { min-height: auto; padding-top: 52px; }.hero-copy h1 { font-size: clamp(34px, 11vw, 42px); line-height: 1.1; letter-spacing: -.035em; }.hero-copy > p { font-size: 15px; line-height: 1.65; }.hero-actions { align-items: stretch; gap: 10px; }.hero-actions > * { flex: 1 1 100%; }.hero-stats { gap: 12px; flex-wrap: wrap; }.facility-grid, .time-slots { grid-template-columns: 1fr; }.calendar-panel { padding: 16px 12px; }.calendar-header, .calendar-days, .calendar-grid { gap: 4px; }.footer-main { grid-template-columns: 1fr 1fr; gap: 30px 20px; }.footer-brand { grid-column: 1 / -1; }.footer-contact { grid-column: auto; }.footer-bottom { flex-direction: column; gap: 8px; }.hero-visual, .hero-visual > img:first-child { min-height: 280px; } }
 @media (max-width: 380px) { .landing-footer { padding-inline: 16px; }.footer-main { grid-template-columns: 1fr; }.footer-brand, .footer-contact { grid-column: auto; }.time-slot { min-width: 0; flex-wrap: wrap; }.time-slot b { margin-left: 21px; }.hero-stats span { flex: 1 1 120px; } }
+@media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1; transform: none; transition: none; }.mascot { animation: none; }.primary-button { transition: none; } }
 </style>

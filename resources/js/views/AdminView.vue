@@ -8,6 +8,7 @@ import {
 } from "vue";
 
 import axios from "axios";
+import notification from '../components/notification/notificationService';
 
 
 
@@ -199,7 +200,6 @@ const editing = ref(false);
 const saving = ref(false);
 const saveError = ref("");
 const statusBusy = ref(null);
-const actionNotice = ref("");
 
 
 
@@ -512,9 +512,9 @@ payload
 
 await loadFacilities();
 modal.value=false;
-actionNotice.value=editing.value
+notification.success(editing.value
     ? "Perubahan fasilitas berhasil disimpan."
-    : "Fasilitas baru berhasil ditambahkan.";
+    : "Fasilitas baru berhasil ditambahkan.");
 }
 
 catch(error){
@@ -545,20 +545,25 @@ saving.value=false;
 async function toggleStatus(item){
     if(statusBusy.value || item.status === "maintenance") return;
     const target = item.status === "active" ? "nonaktif" : "aktif";
-    if(!window.confirm(`Ubah status ${item.name} menjadi ${target}?`)) return;
-
-    statusBusy.value=item.id;
-    saveError.value="";
-    actionNotice.value="";
-    try{
-        await axios.patch(`/api/admin/facilities/${item.id}/toggle-status`);
-        actionNotice.value=`Status ${item.name} berhasil diperbarui.`;
-        await loadFacilities();
-    } catch(error){
-        saveError.value=error?.response?.data?.message || "Status fasilitas gagal diperbarui. Coba lagi.";
-    } finally{
-        statusBusy.value=null;
-    }
+    await notification.confirm({
+        title: 'Ubah status fasilitas',
+        message: `Ubah status ${item.name} menjadi ${target}?`,
+        confirmLabel: `Jadikan ${target}`,
+        tone: item.status === "active" ? 'danger' : 'primary',
+        onConfirm: async () => {
+            statusBusy.value=item.id;
+            saveError.value="";
+            try{
+                await axios.patch(`/api/admin/facilities/${item.id}/toggle-status`);
+                notification.success(`Status ${item.name} berhasil diperbarui.`);
+                await loadFacilities();
+            } catch(error){
+                throw new Error(error?.response?.data?.message || "Status fasilitas gagal diperbarui. Coba lagi.");
+            } finally{
+                statusBusy.value=null;
+            }
+        },
+    });
 
 
 }
@@ -735,7 +740,6 @@ v-for="p in periods"
 <!-- KPI -->
 
 
-<p v-if="actionNotice" class="admin-feedback success-box" role="status">{{actionNotice}}</p>
 <p v-if="saveError && !modal" class="admin-feedback error-box" role="alert">{{saveError}}</p>
 <p v-if="summaryError" class="admin-feedback error-box" role="alert">{{summaryError}}</p>
 

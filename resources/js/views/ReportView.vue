@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Activity, ImagePlus, Send, Wrench, X } from 'lucide-vue-next';
 import { apiError, useLiveCollection } from '../composables/useLiveCollection';
 import { formatDate, statusLabel } from '../utils/reservations';
+import notification from '../components/notification/notificationService';
 import '../../css/workflow.css';
 
 const { items: facilities, error: facilityError } = useLiveCollection('/api/facilities?per_page=100', 15000);
@@ -15,7 +16,6 @@ const preview = ref('');
 const fileInput = ref(null);
 const saving = ref(false);
 const formError = ref('');
-const notice = ref('');
 const openCount = computed(() => tickets.value.filter(item => ['new', 'in_progress'].includes(item.status)).length);
 
 function clearPhoto() {
@@ -42,13 +42,12 @@ async function submitReport() {
     if (saving.value) return;
     saving.value = true;
     formError.value = '';
-    notice.value = '';
     const payload = new FormData();
     for (const [key, value] of Object.entries(form)) payload.append(key, value);
     if (photo.value) payload.append('photos[]', photo.value);
     try {
         const response = await axios.post('/api/user/reports', payload);
-        notice.value = `Laporan LAP-${response.data.data.id} tersimpan dan menunggu penanganan petugas.`;
+        notification.success(`Laporan LAP-${response.data.data.id} tersimpan dan menunggu penanganan petugas.`);
         form.description = '';
         clearPhoto();
         await refresh();
@@ -66,7 +65,6 @@ async function submitReport() {
             <div><p class="eyebrow">RUANGKITA / PENGGUNA</p><h1>Laporan kerusakan</h1></div>
             <span class="wf-live" :class="{ offline: error }"><Activity :size="15" />{{ error ? 'Koneksi bermasalah' : updatedAt ? 'Tersinkron' : 'Menghubungkan...' }}</span>
         </header>
-        <p v-if="notice" class="wf-notice" role="status">{{ notice }}</p>
         <p v-if="error || facilityError" class="wf-notice wf-error" role="alert">{{ error || facilityError }}</p>
         <div class="report-columns">
             <form @submit.prevent="submitReport">

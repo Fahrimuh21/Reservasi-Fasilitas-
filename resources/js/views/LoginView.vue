@@ -5,25 +5,29 @@ import axios from 'axios';
 import { ArrowRight, Eye, EyeOff, LoaderCircle } from 'lucide-vue-next';
 import campusImage from '../../asset/Undip.png';
 import { setAuthSession } from '../auth';
-import BrandLogo from '../components/BrandLogo.vue';
+import BrandLogo from '../components/common/BrandLogo.vue';
+import FormFieldError from '../components/ui/FormFieldError.vue';
+import notification from '../components/notification/notificationService';
+import { useFormErrors } from '../composables/useFormErrors';
 
 const router = useRouter();
 const form = ref({ email: '', password: '' });
 const isSubmitting = ref(false);
-const errorMessage = ref('');
 const showPassword = ref(false);
+const { errors: formErrors, clear: clearErrors, fromResponse } = useFormErrors();
 
 async function submitLogin() {
     if (isSubmitting.value) return;
     isSubmitting.value = true;
-    errorMessage.value = '';
+    clearErrors();
     try {
         const response = await axios.post('/api/login', form.value);
         setAuthSession(response.data.token, response.data.user);
         const destination = { admin: 'admin', officer: 'officer', user: 'facilities' };
         await router.push({ name: destination[response.data.user.role] || 'facilities' });
     } catch (error) {
-        errorMessage.value = error?.response?.data?.message || 'Login gagal. Periksa email dan password.';
+        fromResponse(error, 'Login gagal. Periksa email dan password.', 'email');
+        notification.error(formErrors.email || formErrors.password || formErrors._form || 'Login gagal. Periksa kembali data Anda.');
     } finally {
         isSubmitting.value = false;
     }
@@ -41,9 +45,8 @@ async function submitLogin() {
                 <RouterLink :to="{ name: 'landing' }" class="auth-screen__brand" aria-label="RuangKita, halaman utama"><BrandLogo :size="40" /></RouterLink>
                 <div class="auth-screen__heading"><span class="auth-screen__eyebrow">AKSES CIVITAS AKADEMIKA</span><h1>Selamat datang kembali</h1><p>Masuk untuk melanjutkan reservasi dan pengelolaan fasilitas kampus.</p></div>
                 <form class="auth-screen__fields" @submit.prevent="submitLogin">
-                    <label>Email <input v-model="form.email" type="email" autocomplete="email" placeholder="nama@kampus.ac.id" required /></label>
-                    <label>Password <span class="auth-screen__password"><input v-model="form.password" :type="showPassword ? 'text' : 'password'" autocomplete="current-password" placeholder="Masukkan password" required /><button type="button" class="auth-screen__password-toggle" :aria-label="showPassword ? 'Sembunyikan password' : 'Tampilkan password'" :title="showPassword ? 'Sembunyikan password' : 'Tampilkan password'" @click="showPassword = !showPassword"><EyeOff v-if="showPassword" :size="17" /><Eye v-else :size="17" /></button></span></label>
-                    <p v-if="errorMessage" class="auth-screen__message is-error" role="alert">{{ errorMessage }}</p>
+                    <label>Email <input v-model="form.email" type="email" autocomplete="email" placeholder="nama@kampus.ac.id" required :class="{ 'is-invalid': formErrors.email }" :aria-invalid="!!formErrors.email" @input="clearErrors('email')" /><FormFieldError :message="formErrors.email" /></label>
+                    <label>Password <span class="auth-screen__password"><input v-model="form.password" :type="showPassword ? 'text' : 'password'" autocomplete="current-password" placeholder="Masukkan password" required :class="{ 'is-invalid': formErrors.password }" :aria-invalid="!!formErrors.password" @input="clearErrors('password')" /><button type="button" class="auth-screen__password-toggle" :aria-label="showPassword ? 'Sembunyikan password' : 'Tampilkan password'" :title="showPassword ? 'Sembunyikan password' : 'Tampilkan password'" @click="showPassword = !showPassword"><EyeOff v-if="showPassword" :size="17" /><Eye v-else :size="17" /></button></span><FormFieldError :message="formErrors.password || formErrors._form" /></label>
                     <button class="auth-screen__submit" type="submit" :disabled="isSubmitting"><LoaderCircle v-if="isSubmitting" class="auth-screen__spin" :size="17" /><ArrowRight v-else :size="17" />{{ isSubmitting ? 'Memproses...' : 'Masuk' }}</button>
                 </form>
                 <RouterLink :to="{ name: 'landing' }" class="auth-screen__back">Kembali ke halaman utama</RouterLink>

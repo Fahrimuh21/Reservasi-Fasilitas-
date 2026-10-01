@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue';
 import axios from 'axios';
 import { Activity, CalendarDays, Check, CheckCheck, ClipboardList, Clock3, Inbox, LoaderCircle, RefreshCw, Search, Wrench, X } from 'lucide-vue-next';
-import WorkflowDialog from '../components/WorkflowDialog.vue';
+import WorkflowDialog from '../components/ui/WorkflowDialog.vue';
 import { apiError, useLiveCollection } from '../composables/useLiveCollection';
 import { formatDate, formatTime, statusLabel } from '../utils/reservations';
+import notification from '../components/notification/notificationService';
 import '../../css/workflow.css';
 
 const { items: reservations, loading, refreshing, error, updatedAt, refresh } = useLiveCollection('/api/officer/reservations');
@@ -17,7 +18,6 @@ const decision = ref(null);
 const note = ref('');
 const saving = ref(false);
 const actionError = ref('');
-const notice = ref('');
 const facilityBusy = ref(null);
 const tabs = [
     { value: 'pending', label: 'Menunggu' }, { value: 'approved', label: 'Disetujui' },
@@ -56,7 +56,6 @@ function openDecision(item, action, kind = 'reservation') {
     decision.value = { item, action, kind };
     note.value = '';
     actionError.value = '';
-    notice.value = '';
 }
 
 async function submitDecision() {
@@ -70,7 +69,7 @@ async function submitDecision() {
             : action === 'cancel'
                 ? await axios.patch(`/api/officer/reservations/${item.id}/cancel`, { cancellation_reason: note.value })
                 : await axios.patch(`/api/officer/reservations/${item.id}/${action}`, { decision_note: note.value });
-        notice.value = response.data.message;
+        notification.success(response.data.message || 'Tindakan berhasil disimpan.');
         decision.value = null;
         await Promise.all([refresh(), refreshReports(), refreshFacilities()]);
     } catch (failure) {
@@ -85,19 +84,25 @@ async function changeFacility(item) {
     if (facilityBusy.value || item.status === 'inactive') return;
     const action = item.status === 'pending' ? 'approve' : item.status === 'active' ? 'set-maintenance' : 'complete-maintenance';
     const label = item.status === 'active' ? 'Tandai dalam perbaikan' : 'Aktifkan fasilitas';
-    if (!window.confirm(`${label}: ${item.name}?`)) return;
-    facilityBusy.value = item.id;
-    notice.value = '';
-    actionError.value = '';
-    try {
-        const response = await axios.patch(`/api/officer/facilities/${item.id}/${action}`);
-        notice.value = response.data.message;
-        await refreshFacilities();
-    } catch (failure) {
-        actionError.value = apiError(failure);
-    } finally {
-        facilityBusy.value = null;
-    }
+    await notification.confirm({
+        title: label,
+        message: `${label} untuk ${item.name}?`,
+        confirmLabel: 'Ya, lanjutkan',
+        tone: item.status === 'active' ? 'danger' : 'primary',
+        onConfirm: async () => {
+            facilityBusy.value = item.id;
+            actionError.value = '';
+            try {
+                const response = await axios.patch(`/api/officer/facilities/${item.id}/${action}`);
+                notification.success(response.data.message || 'Status fasilitas berhasil diperbarui.');
+                await refreshFacilities();
+            } catch (failure) {
+                throw new Error(apiError(failure));
+            } finally {
+                facilityBusy.value = null;
+            }
+        },
+    });
 }
 </script>
 
@@ -115,7 +120,6 @@ async function changeFacility(item) {
             <div class="wf-metric"><CheckCheck :size="26" /><div><strong>{{ count('approved') }}</strong><span>Reservasi disetujui</span></div></div>
             <div class="wf-metric"><Wrench :size="26" /><div><strong>{{ openReports }}</strong><span>Laporan terbuka</span></div></div>
         </div>
-        <p v-if="notice" class="wf-notice" role="status">{{ notice }}</p>
         <p v-if="error" class="wf-notice wf-error" role="alert">{{ error }}</p>
         <p v-if="actionError && !decision" class="wf-notice wf-error" role="alert">{{ actionError }}</p>
         <nav class="wf-tabs" aria-label="Jenis permintaan">

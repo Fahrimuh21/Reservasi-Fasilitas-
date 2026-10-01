@@ -88,6 +88,8 @@ html, body, #app { min-width: 0; }
 .auth-screen__fields input, .auth-screen__fields select { width: 100%; min-height: 44px; padding: 9px 12px; border: 1px solid var(--slate-300); border-radius: 7px; background: #fff; color: var(--slate-900); font: inherit; }
 .auth-screen__fields input::placeholder { color: var(--slate-500); }
 .auth-screen__fields input:focus, .auth-screen__fields select:focus { outline: 3px solid var(--blue-100); outline-offset: 1px; border-color: var(--blue-600); }
+.auth-screen__fields input.is-invalid, .auth-screen__fields select.is-invalid { border-color: var(--danger); background: #fffafa; }
+.auth-screen__fields input.is-invalid:focus, .auth-screen__fields select.is-invalid:focus { outline-color: #fecaca; border-color: var(--danger); }
 .auth-screen__password { position: relative; display: block; }
 .auth-screen__password input { padding-right: 44px; }
 .auth-screen__password-toggle { position: absolute; top: 50%; right: 8px; display: grid; width: 30px; height: 30px; place-items: center; transform: translateY(-50%); border: 0; background: transparent; color: var(--slate-600); }
