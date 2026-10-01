@@ -17,6 +17,7 @@ import {
     hasRole,
     isAuthenticated
 } from "../auth";
+import notification from '../components/notification/notificationService';
 
 
 
@@ -279,9 +280,7 @@ function reserve(id, slot = null){
 
 if(!isAuthenticated()){
 
-alert(
-"Login terlebih dahulu untuk reservasi"
-);
+notification.info('Login terlebih dahulu untuk melakukan reservasi.');
 
 router.push({
 name:"login"
@@ -293,9 +292,7 @@ return;
 
 if(!hasRole("user")){
 
-alert(
-"Hanya pengguna yang dapat mengajukan reservasi."
-);
+notification.warning('Hanya pengguna yang dapat mengajukan reservasi.');
 
 return;
 

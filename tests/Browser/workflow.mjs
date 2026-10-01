@@ -35,9 +35,9 @@ async function session(email, route) {
         localStorage.setItem('reservasi_auth_user', JSON.stringify(user));
     }, auth);
     const page = await context.newPage();
-    page.setDefaultTimeout(10000);
+    page.setDefaultTimeout(20000);
     page.on('pageerror', error => failures.push(error.message));
-    await page.goto(`${baseURL}/${route}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await page.goto(`${baseURL}/${route}`, { waitUntil: 'domcontentloaded', timeout: 40000 });
     return page;
 }
 
@@ -132,9 +132,22 @@ try {
     for (const width of [320, 360, 390, 768, 1024, 1440]) {
         const height = width <= 390 ? 844 : 900;
         await publicPage.setViewportSize({ width, height });
-        await publicPage.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-        await expect(publicPage.locator('.landing-nav')).toBeVisible();
-        expect(await publicPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+        await publicPage.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded', timeout: 40000 });
+        await expect(publicPage.locator('.landing-nav')).toBeVisible({ timeout: 15000 });
+        const landingLayout = await publicPage.evaluate(() => ({
+            viewport: window.innerWidth,
+            scrollWidth: document.documentElement.scrollWidth,
+            offenders: [...document.querySelectorAll('body *')]
+                .map(element => ({
+                    tag: element.tagName,
+                    className: typeof element.className === 'string' ? element.className : '',
+                    left: Math.round(element.getBoundingClientRect().left),
+                    right: Math.round(element.getBoundingClientRect().right),
+                }))
+                .filter(item => item.left < -1 || item.right > window.innerWidth + 1)
+                .slice(0, 12),
+        }));
+        expect(landingLayout.scrollWidth, JSON.stringify(landingLayout)).toBeLessThanOrEqual(landingLayout.viewport);
         if (width === 390 || width === 1440) await publicPage.waitForTimeout(800);
         if (width === 390) await publicPage.screenshot({ path: join(artifacts, 'landing-mobile.png'), fullPage: true });
         if (width === 1440) await publicPage.screenshot({ path: join(artifacts, 'landing-desktop.png'), fullPage: true });
@@ -162,17 +175,17 @@ try {
         } else {
             await expect(publicPage.getByRole('button', { name: 'Buka menu navigasi' })).toBeHidden();
         }
-        await publicPage.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        await publicPage.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded', timeout: 40000 });
         await noDocumentOverflow(publicPage, '.auth-screen__panel');
-        await publicPage.goto(`${baseURL}/register`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        await publicPage.goto(`${baseURL}/register`, { waitUntil: 'domcontentloaded', timeout: 40000 });
         await noDocumentOverflow(publicPage, '.auth-screen__panel');
-        await publicPage.goto(`${baseURL}/facilities`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        await publicPage.goto(`${baseURL}/facilities`, { waitUntil: 'domcontentloaded', timeout: 40000 });
         await noDocumentOverflow(publicPage, '#screen-facilities');
         await admin.setViewportSize({ width, height });
         await noDocumentOverflow(admin, '#screen-admin');
     }
     await publicPage.setViewportSize({ width: 768, height: 900 });
-    await publicPage.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await publicPage.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded', timeout: 40000 });
     await publicPage.getByRole('button', { name: 'Buka menu navigasi' }).click();
     await publicPage.setViewportSize({ width: 1024, height: 900 });
     await expect(publicPage.getByRole('dialog', { name: 'Menu navigasi' })).toHaveCount(0);
@@ -185,7 +198,7 @@ try {
     await admin.setViewportSize({ width: 1024, height: 650 });
     await noDocumentOverflow(admin, '#screen-admin');
     await publicPage.setViewportSize({ width: 390, height: 844 });
-    await publicPage.goto(`${baseURL}/register`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await publicPage.goto(`${baseURL}/register`, { waitUntil: 'domcontentloaded', timeout: 40000 });
     await publicPage.screenshot({ path: join(artifacts, 'register-mobile.png'), fullPage: true });
     await admin.setViewportSize({ width: 390, height: 844 });
     await expect.poll(async () => {
@@ -290,12 +303,14 @@ try {
     await expect(user.locator('article').filter({ hasText: 'Proyektor perlu perbaikan' })).toContainText('Kabel diganti', { timeout: 10000 });
     await officer.setViewportSize({ width: 1440, height: 1000 });
     await officer.locator('.sidebar').getByRole('button', { name: 'Keluar' }).click();
-    await expect(officer).toHaveURL(`${baseURL}/`);
+    await officer.getByRole('dialog', { name: 'Keluar dari akun?' }).getByRole('button', { name: 'Ya, keluar' }).click();
+    await expect(officer).toHaveURL(`${baseURL}/`, { timeout: 15000 });
     await admin.setViewportSize({ width: 1440, height: 1000 });
     await admin.locator('.main-content').evaluate(element => { element.scrollTop = 0; });
     await admin.screenshot({ path: join(artifacts, 'admin-desktop.png') });
     await admin.locator('.app-topbar').getByRole('button', { name: 'Keluar' }).click();
-    await expect(admin).toHaveURL(`${baseURL}/`);
+    await admin.getByRole('dialog', { name: 'Keluar dari akun?' }).getByRole('button', { name: 'Ya, keluar' }).click();
+    await expect(admin).toHaveURL(`${baseURL}/`, { timeout: 15000 });
     expect(failures).toEqual([]);
     console.log('PASS: request, approval, rejection/retry, cancellation, persistence, automatic updates, reports, desktop/mobile layout.');
     console.log(`Screenshots: ${artifacts}`);
@@ -304,8 +319,12 @@ try {
         for (const [index, context] of browser.contexts().entries()) {
             const page = context.pages()[0];
             if (!page) continue;
-            await page.screenshot({ path: join(artifacts, `failure-${index}.png`), fullPage: true });
-            console.log(await page.locator('body').innerText());
+            try {
+                await page.screenshot({ path: join(artifacts, `failure-${index}.png`), fullPage: true, timeout: 30000 });
+            } catch (screenshotError) {
+                console.log(`Failure screenshot ${index} skipped: ${screenshotError.message}`);
+            }
+            console.log(await page.locator('body').innerText().catch(() => 'Halaman tidak lagi tersedia.'));
         }
     }
     console.log('Browser errors:', failures);

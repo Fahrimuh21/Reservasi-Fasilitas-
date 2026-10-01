@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { brandConfig } from '../config/brand';
+import { brandConfig } from '../../config/brand';
 
 const props = defineProps({
     source: { type: String, default: '' },
@@ -11,6 +11,7 @@ const props = defineProps({
 
 const imageFailed = ref(false);
 const imageSource = computed(() => props.source || brandConfig.logoSource);
+const hasImage = computed(() => Boolean(imageSource.value) && !imageFailed.value);
 const dimension = computed(() => typeof props.size === 'number' ? `${props.size}px` : props.size);
 
 watch(imageSource, () => { imageFailed.value = false; });
@@ -19,7 +20,7 @@ watch(imageSource, () => { imageFailed.value = false; });
 <template>
     <span
         class="brand-logo-component"
-        :class="{ 'is-inverse': inverse, 'is-icon-only': mode === 'icon' }"
+        :class="{ 'is-inverse': inverse, 'is-icon-only': mode === 'icon', 'has-image': hasImage }"
         :style="{ '--brand-logo-size': dimension }"
         :role="mode === 'icon' ? 'img' : undefined"
         :aria-label="mode === 'icon' ? brandConfig.logoAlt : undefined"
@@ -62,8 +63,20 @@ watch(imageSource, () => { imageFailed.value = false; });
     font-size: calc(var(--brand-logo-size) * .5);
     font-weight: 700;
 }
-.brand-logo-component__mark img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.brand-logo-component__mark img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    transform: scale(2.7) translateY(16%);
+}
+.brand-logo-component.has-image .brand-logo-component__mark {
+    padding: 2px;
+    border-color: transparent;
+    background: #fff;
+}
 .brand-logo-component__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brand-logo-component.is-inverse { color: #fff; }
 .brand-logo-component.is-inverse .brand-logo-component__mark { border-color: rgba(255,255,255,.45); background: #fff; color: var(--blue-700, #1d4ed8); }
+.brand-logo-component.is-inverse.has-image .brand-logo-component__mark { border-color: rgba(255,255,255,.22); background: #fff; }
 </style>

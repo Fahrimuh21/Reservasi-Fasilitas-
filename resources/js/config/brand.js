@@ -1,7 +1,6 @@
-// Simpan logo final, misalnya di public/images/logo-ruangkita.svg,
-// lalu ubah logoSource menjadi '/images/logo-ruangkita.svg'.
+// Logo publik dikonfigurasi di satu tempat agar seluruh tampilan selalu konsisten.
 export const brandConfig = {
     name: 'RuangKita',
-    logoSource: '',
+    logoSource: '/asset/Logo-RuangKita.png',
     logoAlt: 'Logo RuangKita',
 };

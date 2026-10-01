@@ -16,7 +16,8 @@ import {
 
 import axios from "axios";
 import { Building2, CalendarDays, ClipboardCheck, Wrench, Settings, ChevronLeft, ChevronRight, LogOut, Menu, X as CloseIcon } from 'lucide-vue-next';
-import BrandLogo from './BrandLogo.vue';
+import BrandLogo from './common/BrandLogo.vue';
+import notification from './notification/notificationService';
 
 import {
     clearAuthSession,
@@ -207,7 +208,7 @@ onUnmounted(() => {
 
 
 
-async function logout(){
+async function performLogout(){
 const token = getToken();
 
 try{
@@ -238,6 +239,16 @@ window.location.replace(router.resolve({ name:"landing" }).href);
 }
 
 
+}
+
+function logout(){
+notification.confirm({
+    title:'Keluar dari akun?',
+    message:'Sesi Anda akan diakhiri dan halaman akan kembali ke beranda.',
+    confirmLabel:'Ya, keluar',
+    tone:'danger',
+    onConfirm:performLogout
+});
 }
 
 
