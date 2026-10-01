@@ -9,6 +9,7 @@ import {
 
 import axios from "axios";
 import notification from '../components/notification/notificationService';
+import '../../css/workflow.css';
 
 
 
@@ -1230,6 +1231,8 @@ required
 
 type="button"
 
+class="wf-button"
+
 @click="closeModal"
 
 >
@@ -1242,6 +1245,8 @@ Batal
 <button
 
 type="button"
+
+class="wf-button wf-primary"
 
 @click="saveFacility"
 
@@ -1818,15 +1823,6 @@ gap:10px;
 
 }
 
-
-
-.modal-action button:last-child{
-
-background:#2563eb;
-
-color:white;
-
-}
 
 
 .admin-feedback{
