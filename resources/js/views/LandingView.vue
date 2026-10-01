@@ -11,6 +11,7 @@ import {
 
 
 import { RouterLink } from 'vue-router'
+import axios from 'axios'
 
 
 import campusImage from '../../asset/Undip.png'
@@ -84,6 +85,12 @@ const currentCalendarYear = ref(
 
 
 const selectedFacilityId = ref(null)
+const selectedAvailabilityDate = ref(
+  new Date().toLocaleDateString('en-CA')
+)
+const selectedAvailabilitySlots = ref([])
+const availabilityLoading = ref(false)
+const availabilityError = ref('')
 
 
 
@@ -224,31 +231,12 @@ const calendarDays = computed(()=>{
 
 
 
-  const today =
-  new Date()
-
-
-
-  const slots =
-  selectedFacility.value
-  ?.availability_today
-  ||
-  []
-
-
-
-  const hasAvailable =
-  slots.some(
-    slot =>
-    slot.status === 'tersedia'
+  const selectedDate = selectedAvailabilityDate.value
+  const hasAvailable = selectedAvailabilitySlots.value.some(
+    slot => slot.status === 'tersedia'
   )
-
-
-
-  const hasBooked =
-  slots.some(
-    slot =>
-    slot.status === 'terisi'
+  const hasBooked = selectedAvailabilitySlots.value.some(
+    slot => slot.status === 'terisi'
   )
 
 
@@ -267,32 +255,11 @@ const calendarDays = computed(()=>{
 
       empty:false,
 
-
-      today:
-
-      d === today.getDate()
-      &&
-      month === today.getMonth()
-      &&
-      year === today.getFullYear(),
-
-
-
-      available:
-
-      d === today.getDate()
-      &&
-      hasAvailable,
-
-
-
-      booked:
-
-      d === today.getDate()
-      &&
-      hasBooked
-      &&
-      !hasAvailable
+      date: `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+      selected: selectedDate === `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+      today: d === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear(),
+      available: selectedDate === `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}` && hasAvailable,
+      booked: selectedDate === `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}` && hasBooked && !hasAvailable
 
 
     })
@@ -330,6 +297,8 @@ const prevMonth = ()=>{
 
   }
 
+  selectedAvailabilityDate.value = `${currentCalendarYear.value}-${String(currentCalendarMonth.value + 1).padStart(2, '0')}-01`
+
 
 }
 
@@ -355,6 +324,8 @@ const nextMonth = ()=>{
 
   }
 
+  selectedAvailabilityDate.value = `${currentCalendarYear.value}-${String(currentCalendarMonth.value + 1).padStart(2, '0')}-01`
+
 
 }
 
@@ -371,14 +342,7 @@ TIME SLOT
 const timeSlots = computed(()=>{
 
 
-  return (
-
-    selectedFacility.value
-    ?.availability_today
-    ||
-    []
-
-  ).map(slot=>({
+  return selectedAvailabilitySlots.value.map(slot=>({
 
 
     time:
@@ -400,6 +364,45 @@ const timeSlots = computed(()=>{
 
 
   }))
+
+
+
+  watch(
+    [selectedFacilityId, selectedAvailabilityDate],
+    async ([facilityId, date], _previous, onCleanup) => {
+      if (!facilityId || !date) {
+        selectedAvailabilitySlots.value = []
+        return
+      }
+
+      const controller = new AbortController()
+      onCleanup(() => controller.abort())
+      availabilityLoading.value = true
+      availabilityError.value = ''
+
+      try {
+        const response = await axios.get(
+          `/api/facilities/${facilityId}/availability`,
+          { params: { date }, signal: controller.signal }
+        )
+        selectedAvailabilitySlots.value = response.data.data.slots || []
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          selectedAvailabilitySlots.value = []
+          availabilityError.value = error.response?.data?.message || 'Ketersediaan gagal dimuat.'
+        }
+      } finally {
+        if (!controller.signal.aborted) availabilityLoading.value = false
+      }
+    },
+    { immediate: true }
+  )
+
+
+  const selectAvailabilityDate = date => {
+    if (date) selectedAvailabilityDate.value = date
+  }
+
 
 
 })
@@ -467,20 +470,10 @@ computed(()=>{
 
 
 
-  return (
+  if (availabilityLoading.value) return 'Memuat ketersediaan...'
+  if (availabilityError.value) return availabilityError.value
 
-    timeSlots.value.filter(
-
-      slot =>
-      slot.status === 'available'
-
-    ).length
-
-    +
-
-    ' slot tersedia hari ini'
-
-  )
+  return `${timeSlots.value.filter(slot => slot.status === 'available').length} slot tersedia pada ${new Date(`${selectedAvailabilityDate.value}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
 
 
 })
@@ -1012,15 +1005,18 @@ document.body.classList.remove('landing-menu-open')
           <div class="calendar-panel">
             <div class="calendar-header"><button type="button" aria-label="Bulan sebelumnya" @click="prevMonth"><ChevronLeft :size="18" /></button><strong>{{ monthNames[currentCalendarMonth] }} {{ currentCalendarYear }}</strong><button type="button" aria-label="Bulan berikutnya" @click="nextMonth"><ChevronRight :size="18" /></button></div>
             <div class="calendar-days"><span v-for="day in dayLabels" :key="day">{{ day }}</span></div>
-            <div class="calendar-grid"><span v-for="(day, index) in calendarDays" :key="index" :class="{ empty: day.empty, today: day.today, available: day.available, booked: day.booked }">{{ day.day }}</span></div>
+            <div class="calendar-grid"><button v-for="(day, index) in calendarDays" :key="index" type="button" :disabled="day.empty" :aria-label="day.empty ? undefined : new Date(`${day.date}T00:00:00`).toLocaleDateString('id-ID', { dateStyle: 'full' })" :aria-pressed="day.selected" :class="{ empty: day.empty, today: day.today, selected: day.selected, available: day.available, booked: day.booked }" @click="selectAvailabilityDate(day.date)">{{ day.day }}</button></div>
             <div class="legend"><span><i class="dot available"></i> Tersedia</span><span><i class="dot booked"></i> Terisi</span></div>
           </div>
           <div class="availability-copy">
             <span class="eyebrow">KETERSEDIAAN REAL-TIME</span>
             <h2>Pilih fasilitas, lihat slot yang tersedia.</h2>
             <label>Fasilitas yang dipantau<select v-model="selectedFacilityId" :disabled="facilitiesLoading || !liveFacilities.length"><option v-for="facility in liveFacilities" :key="facility.id" :value="facility.id">{{ facility.name }}</option></select></label>
-            <p class="sync-status">{{ facilityAvailabilityText }}<span v-if="facilitiesUpdatedAt"> · {{ facilitiesUpdatedAt.toLocaleTimeString() }}</span></p>
-            <div class="time-slots"><div v-for="slot in timeSlots.slice(0, 8)" :key="slot.time" :class="['time-slot', slot.status]"><Clock :size="14" /> <span>{{ slot.time }}</span><b>{{ slot.status === 'available' ? 'Tersedia' : 'Terisi' }}</b></div></div>
+            <p class="sync-status" :class="{ 'is-error': availabilityError }">{{ facilityAvailabilityText }}<span v-if="facilitiesUpdatedAt"> · {{ facilitiesUpdatedAt.toLocaleTimeString() }}</span></p>
+            <div v-if="availabilityLoading" class="notice">Memuat slot tanggal ini...</div>
+            <div v-else-if="availabilityError" class="notice error">{{ availabilityError }}</div>
+            <div v-else-if="!selectedFacility" class="notice">Belum ada fasilitas aktif.</div>
+            <div v-else class="time-slots"><div v-for="slot in timeSlots.slice(0, 8)" :key="slot.time" :class="['time-slot', slot.status]"><Clock :size="14" /> <span>{{ slot.time }}</span><b>{{ slot.status === 'available' ? 'Tersedia' : 'Terisi' }}</b></div></div>
           </div>
         </div>
       </section>
@@ -1035,7 +1031,7 @@ document.body.classList.remove('landing-menu-open')
         <div class="footer-brand">
           <BrandLogo :size="38" />
           <p>Platform reservasi fasilitas Universitas Diponegoro untuk penggunaan ruang yang lebih tertata.</p>
-          <span class="footer-status"><i></i> Sistem operasional</span>
+          <span class="footer-status">Sistem operasional</span>
         </div>
         <div class="footer-column">
           <h3>Navigasi</h3>
