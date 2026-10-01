@@ -9,6 +9,7 @@ import {
 
 import axios from "axios";
 import notification from '../components/notification/notificationService';
+import { getToken } from '../auth';
 import '../../css/workflow.css';
 
 
@@ -199,6 +200,7 @@ const editing = ref(false);
 
 
 const saving = ref(false);
+const exporting = ref(false);
 const saveError = ref("");
 const statusBusy = ref(null);
 
@@ -627,18 +629,28 @@ time:"1 jam lalu"
 
 
 
-function exportReport(){
-
-
-window.open(
-
-"/api/admin/export/reports",
-
-"_blank"
-
-);
-
-
+async function exportReport() {
+    if (exporting.value) return;
+    exporting.value = true;
+    try {
+        const response = await axios.get('/api/admin/export/reports', {
+            headers: { Authorization: `Bearer ${getToken()}` },
+            responseType: 'blob',
+        });
+        const downloadUrl = URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = 'rekap_laporan_kerusakan.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        notification.success('Unduhan rekap dimulai. Periksa folder Unduhan browser Anda.');
+    } catch {
+        notification.error('Rekap laporan gagal diunduh. Silakan coba lagi.');
+    } finally {
+        exporting.value = false;
+    }
 }
 
 
@@ -910,13 +922,17 @@ class="activity"
 
 <button
 
+type="button"
+
 @click="exportReport"
+
+:disabled="exporting"
 
 class="export"
 
 >
 
-Unduh rekap
+{{ exporting ? 'Mengunduh...' : 'Unduh rekap' }}
 
 </button>
 
