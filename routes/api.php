@@ -121,6 +121,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // POST /api/admin/accounts/{user}/reject
         Route::post('/accounts/{user}/reject', [AdminUserController::class, 'reject']);
 
+        // Setujui seluruh akun yang masih menunggu verifikasi
+        Route::post('/accounts/approve-all', [AdminUserController::class, 'approveAll']);
+
         // FR-5 & FR-6 – Buat akun User atau Officer langsung (langsung active, skip pending)
         // POST /api/admin/users
         // Body: name, email, password, role (user|officer), user_type
@@ -156,6 +159,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Dashboard rekap fasilitas & laporan
         // GET /api/admin/recap
         Route::get('/recap', [RecapController::class, 'index']);
+
+        // Data laporan kerusakan aktual untuk dashboard admin
+        Route::get('/reports', [RecapController::class, 'reports']);
         
         // Export laporan kerusakan ke CSV
         // GET /api/admin/export/reports

@@ -22,4 +22,9 @@ class Report extends Model
     {
         return $this->belongsTo(User::class, 'reporter_id');
     }
+
+    public function handler()
+    {
+        return $this->belongsTo(User::class, 'handled_by');
+    }
 }

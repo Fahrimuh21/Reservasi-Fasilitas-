@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 /**
  * AdminUserController – Kelola akun pengguna oleh Admin.
@@ -81,11 +82,11 @@ class UserController extends Controller
             ], 422);
         }
 
-        $user->update([
+        $user->forceFill([
             'account_status' => 'active',
             'verified_by'    => $request->user()->id,
             'verified_at'    => now(),
-        ]);
+        ])->save();
 
         return response()->json([
             'message' => "Akun {$user->name} berhasil diverifikasi dan diaktifkan.",
@@ -111,11 +112,11 @@ class UserController extends Controller
             ], 422);
         }
 
-        $user->update([
+        $user->forceFill([
             'account_status' => 'rejected',
             'verified_by'    => $request->user()->id,
             'verified_at'    => now(),
-        ]);
+        ])->save();
 
         return response()->json([
             'message' => "Registrasi akun {$user->name} berhasil ditolak.",
@@ -124,6 +125,35 @@ class UserController extends Controller
                 'name'           => $user->name,
                 'account_status' => $user->account_status,
             ],
+        ]);
+    }
+
+    /** Setujui seluruh pendaftaran yang masih pending dalam satu transaksi. */
+    public function approveAll(Request $request): JsonResponse
+    {
+        $approved = DB::transaction(function () use ($request) {
+            $ids = User::query()
+                ->where('account_status', 'pending')
+                ->lockForUpdate()
+                ->pluck('id');
+
+            if ($ids->isEmpty()) {
+                return 0;
+            }
+
+            return User::whereKey($ids)->update([
+                'account_status' => 'active',
+                'verified_by' => $request->user()->id,
+                'verified_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        return response()->json([
+            'message' => $approved > 0
+                ? "{$approved} akun berhasil diverifikasi dan diaktifkan."
+                : 'Tidak ada akun yang menunggu verifikasi.',
+            'approved' => $approved,
         ]);
     }
 
@@ -194,11 +224,11 @@ class UserController extends Controller
         if ($user->account_status === 'active') {
             // Nonaktifkan: cabut SEMUA token Sanctum user tersebut segera
             $user->tokens()->delete();
-            $user->update(['account_status' => 'suspended']);
+            $user->forceFill(['account_status' => 'suspended'])->save();
             $message = "Akun {$user->name} berhasil dinonaktifkan (suspended). Semua sesi aktif telah dicabut.";
         } else {
             // Aktifkan kembali
-            $user->update(['account_status' => 'active']);
+            $user->forceFill(['account_status' => 'active'])->save();
             $message = "Akun {$user->name} berhasil diaktifkan kembali.";
         }
 

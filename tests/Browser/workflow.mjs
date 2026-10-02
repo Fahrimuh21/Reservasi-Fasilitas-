@@ -46,6 +46,7 @@ async function requestBooking(page, start, end, purpose) {
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Fasilitas', { exact: true }).selectOption(String(data.facility_id));
     await dialog.getByLabel('Tanggal', { exact: true }).fill(data.date);
+    await expect(dialog.getByText('Memuat jadwal...')).toHaveCount(0, { timeout: 20000 });
     await dialog.getByLabel('Mulai (WIB)', { exact: true }).fill(start);
     await dialog.getByLabel('Selesai (WIB)', { exact: true }).fill(end);
     await dialog.getByLabel('Keperluan').fill(purpose);
@@ -98,6 +99,19 @@ async function noOverflow(page) {
     }
 }
 
+async function expectCentered(page, locator) {
+    const box = await locator.boundingBox();
+    const viewport = page.viewportSize();
+    expect(Math.abs(box.x + box.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(2);
+    expect(Math.abs(box.y + box.height / 2 - viewport.height / 2)).toBeLessThanOrEqual(2);
+}
+
+async function expectAdminPanelGap(page) {
+    const activity = await page.locator('.admin-grid > .panel').filter({ hasText: 'Aktivitas terbaru' }).boundingBox();
+    const facility = await page.locator('.admin-grid > .facility-panel').boundingBox();
+    expect(facility.y - (activity.y + activity.height)).toBeGreaterThanOrEqual(17);
+}
+
 async function noDocumentOverflow(page, selector) {
     await expect(page.locator(selector)).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
@@ -128,6 +142,25 @@ try {
     const publicPage = await publicContext.newPage();
     publicPage.setDefaultTimeout(15000);
     publicPage.on('pageerror', error => failures.push(error.message));
+
+    await expect(admin.locator('.account-row')).toHaveCount(3, { timeout: 15000 });
+    await admin.getByRole('button', { name: 'Lihat semua 5 akun' }).click();
+    await expect(admin.locator('.account-row')).toHaveCount(5);
+    await admin.getByRole('button', { name: 'Tampilkan 3 akun saja' }).click();
+    await expect(admin.locator('.account-row')).toHaveCount(3);
+    const pendingAccount = admin.locator('.account-row').filter({ hasText: 'browser-pending@example.test' });
+    await expect(pendingAccount).toBeVisible({ timeout: 15000 });
+    await pendingAccount.getByRole('button', { name: 'Setujui', exact: true }).click();
+    await admin.getByRole('dialog', { name: 'Setujui akun baru' }).getByRole('button', { name: 'Setujui akun' }).click();
+    await expect(pendingAccount).toHaveCount(0, { timeout: 15000 });
+    const approvedLogin = await publicContext.request.post(`${baseURL}/api/login`, {
+        data: { email: 'browser-pending@example.test', password: 'password' },
+    });
+    expect(approvedLogin.ok()).toBeTruthy();
+    await expect(admin.locator('.account-row')).toHaveCount(3);
+    await admin.getByRole('button', { name: 'Setujui semua' }).click();
+    await admin.getByRole('dialog', { name: 'Setujui semua akun' }).getByRole('button', { name: 'Setujui semua' }).click();
+    await expect(admin.locator('.account-row')).toHaveCount(0, { timeout: 15000 });
 
     for (const width of [320, 360, 390, 768, 1024, 1440]) {
         const height = width <= 390 ? 844 : 900;
@@ -183,6 +216,7 @@ try {
         await noDocumentOverflow(publicPage, '#screen-facilities');
         await admin.setViewportSize({ width, height });
         await noDocumentOverflow(admin, '#screen-admin');
+        await expectAdminPanelGap(admin);
     }
     await publicPage.setViewportSize({ width: 768, height: 900 });
     await publicPage.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded', timeout: 40000 });
@@ -290,7 +324,9 @@ try {
     await user.getByRole('combobox', { name: 'Kategori', exact: true }).selectOption('Elektronik');
     await user.getByLabel('Deskripsi kerusakan').fill('Proyektor perlu perbaikan');
     await user.getByRole('button', { name: 'Kirim laporan' }).click();
-    await expect(user.getByRole('status')).toContainText('tersimpan');
+    const reportToast = user.getByRole('status');
+    await expect(reportToast).toContainText('tersimpan', { timeout: 20000 });
+    await expectCentered(user, reportToast);
     await officer.getByRole('button', { name: /^Laporan/ }).click();
     const report = officer.locator('article').filter({ hasText: 'Proyektor perlu perbaikan' });
     await expect(report).toBeVisible({ timeout: 10000 });
@@ -301,6 +337,12 @@ try {
     await officer.getByRole('dialog').getByLabel('Catatan (opsional)').fill('Kabel diganti');
     await officer.getByRole('dialog').getByRole('button', { name: 'Simpan status' }).click();
     await expect(user.locator('article').filter({ hasText: 'Proyektor perlu perbaikan' })).toContainText('Kabel diganti', { timeout: 10000 });
+    await admin.setViewportSize({ width: 1440, height: 1000 });
+    const liveReport = admin.locator('.admin-report-row').filter({ hasText: 'Proyektor perlu perbaikan' });
+    await expect(liveReport).toBeVisible({ timeout: 20000 });
+    await expect(liveReport).toContainText('Selesai');
+    await admin.getByRole('button', { name: /^Selesai/ }).click();
+    await expect(liveReport).toBeVisible({ timeout: 15000 });
     await officer.setViewportSize({ width: 1440, height: 1000 });
     await officer.locator('.sidebar').getByRole('button', { name: 'Keluar' }).click();
     await officer.getByRole('dialog', { name: 'Keluar dari akun?' }).getByRole('button', { name: 'Ya, keluar' }).click();
@@ -308,11 +350,30 @@ try {
     await admin.setViewportSize({ width: 1440, height: 1000 });
     await admin.locator('.main-content').evaluate(element => { element.scrollTop = 0; });
     await admin.screenshot({ path: join(artifacts, 'admin-desktop.png') });
-    await admin.locator('.app-topbar').getByRole('button', { name: 'Keluar' }).click();
+    const downloadStarted = admin.waitForEvent('download');
+    await admin.getByRole('button', { name: 'Unduh rekap' }).click();
+    const download = await downloadStarted;
+    expect(download.suggestedFilename()).toMatch(/^rekap_laporan_kerusakan_\d{4}-\d{2}-\d{2}\.csv$/);
+    const csvStream = await download.createReadStream();
+    const csvChunks = [];
+    for await (const chunk of csvStream) csvChunks.push(chunk);
+    const csv = Buffer.concat(csvChunks).toString('utf8');
+    expect(csv).toContain('ID,Pelapor,Fasilitas,Kategori,Status,Tanggal');
+    expect(csv).toContain('Elektronik');
+    const exportToast = admin.getByRole('status');
+    await expect(exportToast).toContainText('Unduhan rekap dimulai');
+    await expectCentered(admin, exportToast);
+
+    const logoutButton = admin.locator('.app-topbar').getByRole('button', { name: 'Keluar' });
+    await logoutButton.click();
+    await admin.keyboard.press('Escape');
+    await expect(admin.getByRole('dialog', { name: 'Keluar dari akun?' })).toHaveCount(0);
+    await expect(logoutButton).toBeFocused();
+    await logoutButton.click();
     await admin.getByRole('dialog', { name: 'Keluar dari akun?' }).getByRole('button', { name: 'Ya, keluar' }).click();
     await expect(admin).toHaveURL(`${baseURL}/`, { timeout: 15000 });
     expect(failures).toEqual([]);
-    console.log('PASS: request, approval, rejection/retry, cancellation, persistence, automatic updates, reports, desktop/mobile layout.');
+    console.log('PASS: request, approval, rejection/retry, cancellation, persistence, reports, CSV download, centered alerts, focus restoration, desktop/mobile layout.');
     console.log(`Screenshots: ${artifacts}`);
 } catch (error) {
     if (browser) {

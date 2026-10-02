@@ -3,6 +3,8 @@ import axios from 'axios';
 
 export function apiError(error) {
     if (error.response?.status === 401) return 'Sesi berakhir. Silakan login kembali.';
+    if (error.response?.status === 403) return error.response?.data?.message || 'Anda tidak memiliki izin untuk tindakan ini.';
+    if (error.response?.status === 404) return 'Data yang diminta tidak ditemukan atau sudah dihapus.';
     if (error.response?.status >= 500) return 'Server belum dapat memproses permintaan. Coba lagi.';
     const errors = Object.values(error.response?.data?.errors || {}).flat();
     return errors.join(' ') || error.response?.data?.message || 'Koneksi terputus. Periksa jaringan dan coba lagi.';

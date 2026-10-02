@@ -1,8 +1,11 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import notification from '../components/notification/notificationService';
+import { downloadCsvResponse, downloadErrorMessage } from '../utils/download';
 
 const stats = ref({});
+const exporting = ref(false);
 
 onMounted(async () => {
     try {
@@ -10,11 +13,22 @@ onMounted(async () => {
         stats.value = response.data;
     } catch (error) {
         console.error("Gagal mengambil data rekap", error);
+        notification.error('Data rekap gagal dimuat. Silakan coba lagi.');
     }
 });
 
-const downloadCsv = () => {
-    window.open('/api/admin/export/reports', '_blank');
+const downloadCsv = async () => {
+    if (exporting.value) return;
+    exporting.value = true;
+    try {
+        const response = await axios.get('/api/admin/export/reports', { responseType: 'blob' });
+        await downloadCsvResponse(response, 'rekap_laporan_kerusakan.csv');
+        notification.success('Unduhan rekap dimulai.');
+    } catch (error) {
+        notification.error(await downloadErrorMessage(error, 'Rekap laporan gagal diunduh. Silakan coba lagi.'));
+    } finally {
+        exporting.value = false;
+    }
 };
 </script>
 
@@ -41,8 +55,8 @@ const downloadCsv = () => {
             </div>
         </div>
 
-        <button @click="downloadCsv" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-            Download Rekap CSV
+        <button @click="downloadCsv" :disabled="exporting" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-60">
+            {{ exporting ? 'Mengunduh...' : 'Download Rekap CSV' }}
         </button>
     </div>
 </template>
