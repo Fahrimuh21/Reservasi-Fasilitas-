@@ -91,6 +91,8 @@ const selectedAvailabilityDate = ref(
 const selectedAvailabilitySlots = ref([])
 const availabilityLoading = ref(false)
 const availabilityError = ref('')
+const currentTime = ref(new Date())
+let availabilityClockInterval
 
 
 
@@ -339,114 +341,67 @@ TIME SLOT
 ========================= */
 
 
-const timeSlots = computed(()=>{
+const timeSlots = computed(() => {
+  const now = currentTime.value
+  const isToday = selectedAvailabilityDate.value === now.toLocaleDateString('en-CA')
 
+  return selectedAvailabilitySlots.value
+    .filter(slot => {
+      if (!isToday) return true
 
-  return selectedAvailabilitySlots.value.map(slot=>({
-
-
-    time:
-
-    `${slot.start} - ${slot.end}`,
-
-
-    status:
-
-    slot.status === 'tersedia'
-
-    ?
-
-    'available'
-
-    :
-
-    'booked'
-
-
-  }))
-
-
-
-  watch(
-    [selectedFacilityId, selectedAvailabilityDate],
-    async ([facilityId, date], _previous, onCleanup) => {
-      if (!facilityId || !date) {
-        selectedAvailabilitySlots.value = []
-        return
-      }
-
-      const controller = new AbortController()
-      onCleanup(() => controller.abort())
-      availabilityLoading.value = true
-      availabilityError.value = ''
-
-      try {
-        const response = await axios.get(
-          `/api/facilities/${facilityId}/availability`,
-          { params: { date }, signal: controller.signal }
-        )
-        selectedAvailabilitySlots.value = response.data.data.slots || []
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          selectedAvailabilitySlots.value = []
-          availabilityError.value = error.response?.data?.message || 'Ketersediaan gagal dimuat.'
-        }
-      } finally {
-        if (!controller.signal.aborted) availabilityLoading.value = false
-      }
-    },
-    { immediate: true }
-  )
-
-
-  const selectAvailabilityDate = date => {
-    if (date) selectedAvailabilityDate.value = date
-  }
-
-
-
+      const slotStart = new Date(`${selectedAvailabilityDate.value}T${slot.start}:00`)
+      return slotStart > now
+    })
+    .map(slot => ({
+      time: `${slot.start} - ${slot.end}`,
+      status: slot.status === 'tersedia' ? 'available' : 'booked'
+    }))
 })
 
-
-
-
-
-
 watch(
-
-  liveFacilities,
-
-  items=>{
-
-
-    if(
-
-      !selectedFacilityId.value
-
-      &&
-
-      items.length
-
-    ){
-
-      selectedFacilityId.value =
-      items[0].id
-
+  [selectedFacilityId, selectedAvailabilityDate],
+  async ([facilityId, date], _previous, onCleanup) => {
+    if (!facilityId || !date) {
+      selectedAvailabilitySlots.value = []
+      return
     }
 
+    const controller = new AbortController()
+    onCleanup(() => controller.abort())
+    availabilityLoading.value = true
+    availabilityError.value = ''
 
+    try {
+      const response = await axios.get(
+        `/api/facilities/${facilityId}/availability`,
+        { params: { date }, signal: controller.signal }
+      )
+      selectedAvailabilitySlots.value = response.data.data.slots || []
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        selectedAvailabilitySlots.value = []
+        availabilityError.value = error.response?.data?.message || 'Ketersediaan gagal dimuat.'
+      }
+    } finally {
+      if (!controller.signal.aborted) availabilityLoading.value = false
+    }
   },
-
-  {
-    immediate:true
-  }
-
+  { immediate: true }
 )
 
+const selectAvailabilityDate = date => {
+  if (date) selectedAvailabilityDate.value = date
+}
 
-
-
-
+watch(
+  liveFacilities,
+  items => {
+    if (!selectedFacilityId.value && items.length) {
+      selectedFacilityId.value = items[0].id
+    }
+  },
+  { immediate: true }
+)
 
 const facilityAvailabilityText =
 computed(()=>{
@@ -889,6 +844,9 @@ passive:true
 
   window.addEventListener('resize', handleResize)
   window.addEventListener('keydown', handleMenuKeydown)
+  availabilityClockInterval = window.setInterval(() => {
+    currentTime.value = new Date()
+  }, 30000)
   handleScroll()
 
 
@@ -914,6 +872,7 @@ handleScroll
 
 window.removeEventListener('resize', handleResize)
 window.removeEventListener('keydown', handleMenuKeydown)
+window.clearInterval(availabilityClockInterval)
 document.body.classList.remove('landing-menu-open')
 
 

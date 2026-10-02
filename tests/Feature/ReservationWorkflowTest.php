@@ -109,6 +109,14 @@ class ReservationWorkflowTest extends TestCase
         $this->patchJson("/api/officer/reservations/$id/approve")->assertUnprocessable();
     }
 
+    public function test_availability_marks_only_past_slots_as_unavailable_without_four_hour_cutoff(): void
+    {
+        $this->getJson("/api/facilities/{$this->facility->id}/availability?date=2026-09-24")
+            ->assertOk()
+            ->assertJsonPath('data.slots.1.status', 'terisi')
+            ->assertJsonPath('data.slots.2.status', 'tersedia');
+    }
+
     public function test_overlap_is_rejected_but_adjacent_slot_is_allowed(): void
     {
         $this->requestReservation();
