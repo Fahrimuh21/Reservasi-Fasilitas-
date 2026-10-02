@@ -19,6 +19,8 @@ function dismiss(id) {
 }
 
 function show(type, message, options = {}) {
+    // Alert umum ditampilkan satu per satu agar tidak menumpuk di tengah viewport.
+    for (const toast of [...notificationState.toasts]) dismiss(toast.id);
     const id = nextToastId++;
     const toast = {
         id,

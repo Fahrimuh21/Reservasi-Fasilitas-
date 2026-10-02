@@ -10,6 +10,7 @@ import {
 import axios from "axios";
 import notification from '../components/notification/notificationService';
 import { getToken } from '../auth';
+import { downloadCsvResponse, downloadErrorMessage } from '../utils/download';
 import '../../css/workflow.css';
 
 
@@ -63,6 +64,26 @@ users:0
 const summaryLoading = ref(true);
 const summaryError = ref("");
 const facilitySummary = ref([]);
+const pendingAccounts = ref([]);
+const pendingAccountsLoading = ref(true);
+const pendingAccountsError = ref("");
+const accountBusy = ref(null);
+const accountsExpanded = ref(false);
+const visiblePendingAccounts = computed(() => accountsExpanded.value
+    ? pendingAccounts.value
+    : pendingAccounts.value.slice(0, 3));
+const adminReports = ref([]);
+const adminReportsLoading = ref(true);
+const adminReportsError = ref('');
+const reportFilter = ref('all');
+const reportCounts = ref({ all:0, new:0, in_progress:0, resolved:0, rejected:0 });
+const reportFilters = [
+    { value:'all', label:'Semua' },
+    { value:'new', label:'Baru' },
+    { value:'in_progress', label:'Diproses' },
+    { value:'resolved', label:'Selesai' },
+    { value:'rejected', label:'Ditolak' },
+];
 
 
 
@@ -156,6 +177,107 @@ async function loadSummary(){
     }
 }
 
+async function loadPendingAccounts(){
+    try{
+        const response = await axios.get('/api/admin/accounts/pending', { timeout:10000 });
+        pendingAccounts.value = response.data.data || [];
+        pendingAccountsError.value = '';
+    } catch(error){
+        pendingAccountsError.value = error?.response?.data?.message || 'Antrean verifikasi akun belum dapat dimuat.';
+    } finally{
+        pendingAccountsLoading.value = false;
+    }
+}
+
+async function loadAdminReports(){
+    try{
+        const response = await axios.get('/api/admin/reports', {
+            params:{
+                limit:20,
+                ...(reportFilter.value === 'all' ? {} : { status:reportFilter.value }),
+            },
+            timeout:10000,
+        });
+        adminReports.value = response.data.data || [];
+        reportCounts.value = response.data.counts || reportCounts.value;
+        adminReportsError.value = '';
+    } catch(error){
+        adminReportsError.value = error?.response?.data?.message || 'Data laporan kerusakan belum dapat dimuat.';
+    } finally{
+        adminReportsLoading.value = false;
+    }
+}
+
+function changeReportFilter(value){
+    reportFilter.value = value;
+    adminReportsLoading.value = true;
+    loadAdminReports();
+}
+
+function userTypeLabel(type){
+    return { mahasiswa:'Mahasiswa', dosen:'Dosen', staf:'Staf' }[type] || type || 'Pengguna';
+}
+
+function registeredAt(value){
+    if(!value) return 'Waktu pendaftaran tidak tersedia';
+    return new Intl.DateTimeFormat('id-ID', {
+        dateStyle:'medium',
+        timeStyle:'short',
+        timeZone:'Asia/Jakarta'
+    }).format(new Date(value)) + ' WIB';
+}
+
+async function decideAccount(user, action){
+    if(accountBusy.value) return;
+    const approving = action === 'approve';
+    await notification.confirm({
+        title: approving ? 'Setujui akun baru' : 'Tolak pendaftaran akun',
+        message: approving
+            ? `Aktifkan akun ${user.name} (${user.email})? Setelah disetujui, pengguna dapat langsung login.`
+            : `Tolak pendaftaran ${user.name} (${user.email})? Pengguna tidak akan dapat login.`,
+        confirmLabel: approving ? 'Setujui akun' : 'Tolak akun',
+        tone: approving ? 'primary' : 'danger',
+        onConfirm: async () => {
+            accountBusy.value = user.id;
+            try{
+                const response = await axios.post(`/api/admin/accounts/${user.id}/${action}`);
+                pendingAccounts.value = pendingAccounts.value.filter(item => item.id !== user.id);
+                if(pendingAccounts.value.length <= 3) accountsExpanded.value = false;
+                notification.success(response.data.message || (approving ? 'Akun berhasil disetujui.' : 'Pendaftaran berhasil ditolak.'));
+                await loadSummary();
+            } catch(error){
+                throw new Error(error?.response?.data?.message || 'Keputusan akun gagal disimpan. Silakan coba lagi.');
+            } finally{
+                accountBusy.value = null;
+            }
+        },
+    });
+}
+
+async function approveAllAccounts(){
+    if(accountBusy.value || !pendingAccounts.value.length) return;
+    await notification.confirm({
+        title:'Setujui semua akun',
+        message:`Aktifkan seluruh ${pendingAccounts.value.length} akun yang sedang menunggu? Semua pengguna tersebut akan langsung dapat login.`,
+        confirmLabel:'Setujui semua',
+        tone:'primary',
+        onConfirm:async () => {
+            accountBusy.value = 'all';
+            try{
+                const response = await axios.post('/api/admin/accounts/approve-all');
+                pendingAccounts.value = [];
+                accountsExpanded.value = false;
+                notification.success(response.data.message || 'Seluruh akun berhasil disetujui.');
+                await loadSummary();
+            } catch(error){
+                throw new Error(error?.response?.data?.message || 'Persetujuan massal gagal disimpan.');
+            } finally{
+                accountBusy.value = null;
+            }
+        },
+    });
+}
+
 
 
 
@@ -234,7 +356,11 @@ function statusLabel(status){
         active:"Aktif",
         inactive:"Tidak aktif",
         maintenance:"Pemeliharaan",
-        pending:"Menunggu persetujuan"
+        pending:"Menunggu persetujuan",
+        new:"Baru",
+        in_progress:"Diproses",
+        resolved:"Selesai",
+        rejected:"Ditolak"
     }[status] || status;
 }
 
@@ -355,8 +481,14 @@ loadFacilities();
 
 loadMaster();
 loadSummary();
+loadPendingAccounts();
+loadAdminReports();
 
-facilitiesTimer = window.setInterval(loadFacilities, 15000);
+facilitiesTimer = window.setInterval(() => {
+    loadFacilities();
+    loadPendingAccounts();
+    loadAdminReports();
+}, 15000);
 
 
 });
@@ -600,28 +732,10 @@ b.capacity-a.capacity
 
 
 
-const activities=[
-
-
-{
-text:"Reservasi REQ-102 disetujui",
-time:"5 menit lalu"
-},
-
-
-{
-text:"Fasilitas Lab Baru ditambahkan",
-time:"30 menit lalu"
-},
-
-
-{
-text:"Laporan kerusakan selesai",
-time:"1 jam lalu"
-}
-
-
-];
+const activities = computed(() => adminReports.value.slice(0, 3).map(report => ({
+    text:`Laporan LAP-${report.id} ${statusLabel(report.status).toLowerCase()} · ${report.facility?.name || 'Fasilitas tidak tersedia'}`,
+    time:registeredAt(report.updated_at || report.created_at),
+})));
 
 
 
@@ -637,17 +751,10 @@ async function exportReport() {
             headers: { Authorization: `Bearer ${getToken()}` },
             responseType: 'blob',
         });
-        const downloadUrl = URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = 'rekap_laporan_kerusakan.csv';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        await downloadCsvResponse(response, 'rekap_laporan_kerusakan.csv');
         notification.success('Unduhan rekap dimulai. Periksa folder Unduhan browser Anda.');
-    } catch {
-        notification.error('Rekap laporan gagal diunduh. Silakan coba lagi.');
+    } catch (error) {
+        notification.error(await downloadErrorMessage(error, 'Rekap laporan gagal diunduh. Silakan coba lagi.'));
     } finally {
         exporting.value = false;
     }
@@ -713,10 +820,6 @@ Monitor penggunaan fasilitas dan kelola seluruh sistem.
 </div>
 
 
-
-
-
-
 <div class="period">
 
 
@@ -742,6 +845,52 @@ v-for="p in periods"
 
 
 </div>
+
+
+<section class="panel account-panel" aria-labelledby="account-verification-title">
+    <div class="panel-header account-panel__header">
+        <div>
+            <h2 id="account-verification-title">Verifikasi akun</h2>
+            <p>Setujui atau tolak akun yang mendaftar secara mandiri.</p>
+        </div>
+        <div class="account-panel__tools">
+            <span class="account-count" :class="{ 'has-pending': pendingAccounts.length }">
+                {{ pendingAccounts.length }} menunggu
+            </span>
+            <button v-if="pendingAccounts.length" type="button" class="approve-all" :disabled="!!accountBusy" @click="approveAllAccounts">
+                {{accountBusy === 'all' ? 'Memproses...' : 'Setujui semua'}}
+            </button>
+        </div>
+    </div>
+
+    <p v-if="pendingAccountsError" class="admin-feedback error-box" role="alert">{{pendingAccountsError}}</p>
+    <p v-else-if="pendingAccountsLoading" class="admin-feedback" role="status">Memuat akun yang menunggu persetujuan...</p>
+    <div v-else-if="!pendingAccounts.length" class="account-empty">
+        <strong>Tidak ada akun yang menunggu</strong>
+        <span>Pendaftaran baru akan muncul otomatis di bagian ini.</span>
+    </div>
+    <div v-else class="account-list">
+        <article v-for="user in visiblePendingAccounts" :key="user.id" class="account-row">
+            <div class="account-avatar" aria-hidden="true">{{(user.name || 'P').charAt(0).toUpperCase()}}</div>
+            <div class="account-identity">
+                <strong>{{user.name}}</strong>
+                <a :href="`mailto:${user.email}`">{{user.email}}</a>
+                <small>{{userTypeLabel(user.user_type)}} · Daftar {{registeredAt(user.created_at)}}</small>
+            </div>
+            <div class="account-actions">
+                <button type="button" class="account-reject" :disabled="!!accountBusy" @click="decideAccount(user, 'reject')">
+                    {{accountBusy === user.id ? 'Memproses...' : 'Tolak'}}
+                </button>
+                <button type="button" class="account-approve" :disabled="!!accountBusy" @click="decideAccount(user, 'approve')">
+                    {{accountBusy === user.id ? 'Memproses...' : 'Setujui'}}
+                </button>
+            </div>
+        </article>
+        <button v-if="pendingAccounts.length > 3" type="button" class="account-expand" :aria-expanded="accountsExpanded" @click="accountsExpanded = !accountsExpanded">
+            {{accountsExpanded ? 'Tampilkan 3 akun saja' : `Lihat semua ${pendingAccounts.length} akun`}}
+        </button>
+    </div>
+</section>
 
 
 
@@ -820,6 +969,48 @@ item.type
 
 
 </div>
+
+
+<section class="panel report-live-panel" aria-labelledby="live-reports-title">
+    <div class="panel-header report-live-panel__header">
+        <div>
+            <h2 id="live-reports-title"><span class="live-dot" aria-hidden="true"></span>Laporan kerusakan terkini</h2>
+            <p>Data langsung dari database, diperbarui otomatis setiap 15 detik.</p>
+        </div>
+        <span class="report-total">{{reportCounts.all}} laporan</span>
+    </div>
+
+    <div class="report-filter-tabs" aria-label="Filter status laporan">
+        <button v-for="filterItem in reportFilters" :key="filterItem.value" type="button" :aria-pressed="reportFilter === filterItem.value" @click="changeReportFilter(filterItem.value)">
+            {{filterItem.label}} <small>{{reportCounts[filterItem.value] || 0}}</small>
+        </button>
+    </div>
+
+    <p v-if="adminReportsError" class="admin-feedback error-box" role="alert">{{adminReportsError}}</p>
+    <p v-else-if="adminReportsLoading" class="admin-feedback" role="status">Memuat laporan kerusakan...</p>
+    <div v-else-if="!adminReports.length" class="account-empty">
+        <strong>Belum ada laporan {{reportFilter === 'all' ? '' : statusLabel(reportFilter).toLowerCase()}}</strong>
+        <span>Laporan pengguna akan muncul otomatis di bagian ini.</span>
+    </div>
+    <div v-else class="admin-report-list">
+        <article v-for="report in adminReports" :key="report.id" class="admin-report-row">
+            <div class="admin-report-row__top">
+                <div>
+                    <strong>{{report.facility?.name || 'Fasilitas tidak tersedia'}}</strong>
+                    <small>LAP-{{report.id}} · {{report.user?.name || 'Pelapor tidak tersedia'}} · {{report.category}}</small>
+                </div>
+                <span class="report-status" :class="`is-${report.status}`">{{statusLabel(report.status)}}</span>
+            </div>
+            <p>{{report.description}}</p>
+            <div class="admin-report-meta">
+                <span>{{registeredAt(report.created_at)}}</span>
+                <span v-if="report.handler">Ditangani {{report.handler.name}}</span>
+                <span v-if="report.photos?.length">{{report.photos.length}} foto</span>
+            </div>
+            <p v-if="report.resolution_note" class="admin-report-note">Catatan: {{report.resolution_note}}</p>
+        </article>
+    </div>
+</section>
 
 
 
@@ -939,16 +1130,6 @@ class="export"
 
 
 </div>
-
-
-
-
-</div>
-
-
-
-
-
 
 
 
@@ -1103,6 +1284,10 @@ Edit
 
 
 
+</div>
+
+
+<!-- END ADMIN GRID -->
 </div>
 
 
@@ -2144,6 +2329,261 @@ gap:10px;
     margin-top: 0;
 }
 
+#screen-admin .account-panel {
+    margin-bottom:24px;
+}
+
+#screen-admin .account-panel__header {
+    margin-bottom:16px;
+}
+
+#screen-admin .account-panel__tools {
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+#screen-admin .account-count {
+    flex-shrink:0;
+    padding:6px 10px;
+    border-radius:999px;
+    background:var(--slate-100);
+    color:var(--slate-600);
+    font-size:11px;
+    font-weight:800;
+}
+
+#screen-admin .account-count.has-pending {
+    background:#fff7ed;
+    color:#c2410c;
+}
+
+#screen-admin .approve-all {
+    min-height:36px;
+    padding:0 12px;
+    border:1px solid var(--blue-600);
+    border-radius:8px;
+    background:var(--blue-600);
+    color:#fff;
+    font:inherit;
+    font-size:11px;
+    font-weight:800;
+}
+
+#screen-admin .approve-all:disabled { cursor:wait; opacity:.6; }
+
+#screen-admin .account-list {
+    display:grid;
+    gap:10px;
+}
+
+#screen-admin .account-row {
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr) auto;
+    align-items:center;
+    gap:14px;
+    padding:14px;
+    border:1px solid var(--slate-200);
+    border-radius:12px;
+    background:var(--slate-50);
+}
+
+#screen-admin .account-avatar {
+    display:grid;
+    width:42px;
+    height:42px;
+    place-items:center;
+    border-radius:10px;
+    background:var(--blue-100);
+    color:var(--blue-800);
+    font-size:15px;
+    font-weight:800;
+}
+
+#screen-admin .account-identity {
+    min-width:0;
+}
+
+#screen-admin .account-identity strong,
+#screen-admin .account-identity a,
+#screen-admin .account-identity small {
+    display:block;
+    overflow-wrap:anywhere;
+}
+
+#screen-admin .account-identity strong { color:var(--slate-900); font-size:14px; }
+#screen-admin .account-identity a { margin-top:2px; color:var(--blue-700); font-size:12px; }
+#screen-admin .account-identity small { margin-top:5px; color:var(--slate-500); font-size:11px; }
+
+#screen-admin .account-actions {
+    display:flex;
+    gap:8px;
+}
+
+#screen-admin .account-actions button {
+    min-height:38px;
+    padding:0 14px;
+    border-radius:8px;
+    font:inherit;
+    font-size:12px;
+    font-weight:700;
+}
+
+#screen-admin .account-reject { border:1px solid #fecaca; background:#fff; color:#b91c1c; }
+#screen-admin .account-approve { border:1px solid var(--blue-600); background:var(--blue-600); color:#fff; }
+#screen-admin .account-actions button:disabled { cursor:wait; opacity:.6; }
+
+#screen-admin .account-expand {
+    width:100%;
+    min-height:40px;
+    border:1px solid var(--slate-200);
+    border-radius:8px;
+    background:#fff;
+    color:var(--blue-700);
+    font:inherit;
+    font-size:12px;
+    font-weight:700;
+}
+
+#screen-admin .account-empty {
+    display:grid;
+    gap:4px;
+    padding:20px;
+    border:1px dashed var(--slate-300);
+    border-radius:12px;
+    background:var(--slate-50);
+    color:var(--slate-600);
+    text-align:center;
+}
+
+#screen-admin .account-empty strong { color:var(--slate-800); font-size:13px; }
+#screen-admin .account-empty span { font-size:11px; }
+
+#screen-admin .report-live-panel {
+    margin-bottom:24px;
+}
+
+#screen-admin .report-live-panel__header h2 {
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+#screen-admin .live-dot {
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--success);
+    box-shadow:0 0 0 4px #dcfce7;
+}
+
+#screen-admin .report-total {
+    flex-shrink:0;
+    padding:6px 10px;
+    border-radius:999px;
+    background:var(--blue-50);
+    color:var(--blue-700);
+    font-size:11px;
+    font-weight:800;
+}
+
+#screen-admin .report-filter-tabs {
+    display:flex;
+    gap:6px;
+    margin:0 0 16px;
+    overflow-x:auto;
+    scrollbar-width:thin;
+}
+
+#screen-admin .report-filter-tabs button {
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    min-height:36px;
+    padding:0 12px;
+    border:1px solid var(--slate-200);
+    border-radius:8px;
+    background:#fff;
+    color:var(--slate-600);
+    font:inherit;
+    font-size:11px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+#screen-admin .report-filter-tabs button[aria-pressed="true"] {
+    border-color:var(--blue-600);
+    background:var(--blue-50);
+    color:var(--blue-700);
+}
+
+#screen-admin .report-filter-tabs small {
+    padding:2px 6px;
+    border-radius:999px;
+    background:var(--slate-100);
+    color:inherit;
+}
+
+#screen-admin .admin-report-list {
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+    max-height:520px;
+    overflow-y:auto;
+    padding-right:4px;
+}
+
+#screen-admin .admin-report-row {
+    display:grid;
+    align-content:start;
+    gap:9px;
+    padding:14px;
+    border:1px solid var(--slate-200);
+    border-radius:12px;
+    background:var(--slate-50);
+}
+
+#screen-admin .admin-report-row__top {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+}
+
+#screen-admin .admin-report-row__top > div { min-width:0; }
+#screen-admin .admin-report-row__top strong { display:block; color:var(--slate-900); font-size:13px; }
+#screen-admin .admin-report-row__top small { display:block; margin-top:3px; color:var(--slate-500); font-size:10px; overflow-wrap:anywhere; }
+#screen-admin .admin-report-row > p { margin:0; color:var(--slate-700); font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+
+#screen-admin .report-status {
+    flex-shrink:0;
+    padding:5px 8px;
+    border-radius:999px;
+    background:var(--slate-100);
+    color:var(--slate-700);
+    font-size:10px;
+    font-weight:800;
+}
+
+#screen-admin .report-status.is-new { background:#eff6ff; color:#1d4ed8; }
+#screen-admin .report-status.is-in_progress { background:#fff7ed; color:#c2410c; }
+#screen-admin .report-status.is-resolved { background:#dcfce7; color:#15803d; }
+#screen-admin .report-status.is-rejected { background:#fee2e2; color:#b91c1c; }
+
+#screen-admin .admin-report-meta {
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px 12px;
+    color:var(--slate-500);
+    font-size:10px;
+}
+
+#screen-admin .admin-report-note {
+    padding-top:8px;
+    border-top:1px dashed var(--slate-300);
+    color:var(--slate-600) !important;
+}
+
 @media (max-width: 1000px) {
     #screen-admin .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -2156,6 +2596,11 @@ gap:10px;
     .modal { padding:22px 18px; }
     .modal-action { flex-direction:column-reverse; }
     .modal-action button { width:100%; min-height:42px; }
+    #screen-admin .account-panel__header { align-items:flex-start; }
+    #screen-admin .account-panel__tools { width:100%; justify-content:space-between; }
+    #screen-admin .account-row { grid-template-columns:auto minmax(0, 1fr); }
+    #screen-admin .account-actions { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; }
+    #screen-admin .admin-report-list { grid-template-columns:1fr; max-height:620px; }
 }
 
 /* Final admin layout contract. */
@@ -2359,5 +2804,7 @@ gap:10px;
     #screen-admin .stat-card { min-height:88px; }
     #screen-admin .panel-header { flex-direction:column; }
     #screen-admin .panel-header button { width:100%; }
+    #screen-admin .account-panel__tools { flex-wrap:wrap; }
+    #screen-admin .account-panel__tools .account-count { width:auto; }
 }
 </style>

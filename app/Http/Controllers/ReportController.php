@@ -6,7 +6,9 @@ use App\Models\Facility;
 use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ReportController extends Controller
 {
@@ -72,45 +74,76 @@ class ReportController extends Controller
     // Officer: Proses Laporan & Sinkronisasi Maintenance
     public function updateStatus(Request $request, Report $report)
     {
-        $request->validate([
+        $validated = $request->validate([
             'status' => 'required|in:in_progress,resolved,rejected',
             'resolution_note' => 'nullable|string|max:1000',
         ]);
 
-        DB::transaction(function () use ($request, $report) {
-            $facility = Facility::whereKey($report->facility_id)->lockForUpdate()->firstOrFail();
-            $report = Report::whereKey($report->id)->lockForUpdate()->firstOrFail();
-            $allowed = ['new' => ['in_progress', 'rejected'], 'in_progress' => ['resolved']];
-            if (! in_array($request->status, $allowed[$report->status] ?? [])) {
-                throw ValidationException::withMessages(['status' => 'Laporan sudah diproses atau transisi status tidak valid.']);
-            }
-            $report->update([
-                'status' => $request->status,
-                'resolution_note' => $request->resolution_note,
-                'handled_by' => $request->user()->id,
+        try {
+            $updatedReport = DB::transaction(function () use ($request, $report, $validated) {
+                $facility = Facility::whereKey($report->facility_id)->lockForUpdate()->firstOrFail();
+                $lockedReport = Report::whereKey($report->id)->lockForUpdate()->firstOrFail();
+                $allowed = ['new' => ['in_progress', 'rejected'], 'in_progress' => ['resolved']];
+
+                if (! in_array($validated['status'], $allowed[$lockedReport->status] ?? [], true)) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Laporan sudah diproses atau transisi status tidak valid.',
+                    ]);
+                }
+
+                $lockedReport->update([
+                    'status' => $validated['status'],
+                    'resolution_note' => $validated['resolution_note'] ?? null,
+                    'handled_by' => $request->user()->id,
+                ]);
+
+                $newStatus = $facility->status;
+                if ($validated['status'] === 'in_progress' && $facility->isActive()) {
+                    $newStatus = 'maintenance';
+                } elseif ($validated['status'] === 'resolved'
+                    && $facility->status === 'maintenance'
+                    && ! Report::where('facility_id', $facility->id)->where('status', 'in_progress')->exists()
+                    && DB::table('facility_status_logs')
+                        ->where('facility_id', $facility->id)
+                        ->latest('id')
+                        ->value('related_report_id') !== null) {
+                    // Jangan menimpa maintenance manual. Hanya pulihkan fasilitas bila
+                    // transisi maintenance terakhir berasal dari alur laporan.
+                    $newStatus = 'active';
+                }
+
+                if ($newStatus !== $facility->status) {
+                    DB::table('facility_status_logs')->insert([
+                        'facility_id' => $facility->id,
+                        'old_status' => $facility->status,
+                        'new_status' => $newStatus,
+                        'related_report_id' => $lockedReport->id,
+                        'changed_by' => $request->user()->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    $facility->update(['status' => $newStatus]);
+                }
+
+                return $lockedReport->load(['facility:id,name,status', 'user:id,name,email', 'photos']);
+            });
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            Log::error('Gagal memperbarui status laporan.', [
+                'report_id' => $report->id,
+                'officer_id' => $request->user()?->id,
+                'exception' => $exception,
             ]);
 
-            $newStatus = $facility->status;
-            if ($request->status === 'in_progress' && $facility->isActive()) {
-                $newStatus = 'maintenance';
-            } elseif ($request->status === 'resolved' && $facility->status === 'maintenance'
-                && ! Report::where('facility_id', $facility->id)->where('status', 'in_progress')->exists()) {
-                $newStatus = 'active';
-            }
-            if ($newStatus !== $facility->status) {
-                DB::table('facility_status_logs')->insert([
-                    'facility_id' => $facility->id,
-                    'old_status' => $facility->status,
-                    'new_status' => $newStatus,
-                    'related_report_id' => $report->id,
-                    'changed_by' => $request->user()->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-                $facility->update(['status' => $newStatus]);
-            }
-        });
+            return response()->json([
+                'message' => 'Server tidak dapat menyimpan perubahan laporan. Silakan coba lagi.',
+            ], 500);
+        }
 
-        return response()->json(['message' => 'Status laporan dan fasilitas diperbarui']);
+        return response()->json([
+            'message' => 'Status laporan dan fasilitas diperbarui.',
+            'data' => $updatedReport,
+        ]);
     }
 }

@@ -74,7 +74,7 @@ async function submitDecision() {
         await Promise.all([refresh(), refreshReports(), refreshFacilities()]);
     } catch (failure) {
         actionError.value = apiError(failure);
-        await refresh();
+        await (kind === 'report' ? refreshReports() : refresh());
     } finally {
         saving.value = false;
     }
