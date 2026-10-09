@@ -27,22 +27,22 @@ import '../../css/workflow.css';
 const period = ref("month");
 
 
-const periods=[
+const periods = [
 
-{
-value:"week",
-label:"7 Hari"
-},
+    {
+        value: "week",
+        label: "7 Hari"
+    },
 
-{
-value:"month",
-label:"30 Hari"
-},
+    {
+        value: "month",
+        label: "30 Hari"
+    },
 
-{
-value:"year",
-label:"1 Tahun"
-}
+    {
+        value: "year",
+        label: "1 Tahun"
+    }
 
 ];
 
@@ -52,13 +52,13 @@ label:"1 Tahun"
 
 const stats = ref({
 
-reservations:0,
+    reservations: 0,
 
-usage:0,
+    usage: 0,
 
-reports:0,
+    reports: 0,
 
-users:0
+    users: 0
 
 });
 const summaryLoading = ref(true);
@@ -76,13 +76,13 @@ const adminReports = ref([]);
 const adminReportsLoading = ref(true);
 const adminReportsError = ref('');
 const reportFilter = ref('all');
-const reportCounts = ref({ all:0, new:0, in_progress:0, resolved:0, rejected:0 });
+const reportCounts = ref({ all: 0, new: 0, in_progress: 0, resolved: 0, rejected: 0 });
 const reportFilters = [
-    { value:'all', label:'Semua' },
-    { value:'new', label:'Baru' },
-    { value:'in_progress', label:'Diproses' },
-    { value:'resolved', label:'Selesai' },
-    { value:'rejected', label:'Ditolak' },
+    { value: 'all', label: 'Semua' },
+    { value: 'new', label: 'Baru' },
+    { value: 'in_progress', label: 'Diproses' },
+    { value: 'resolved', label: 'Selesai' },
+    { value: 'rejected', label: 'Ditolak' },
 ];
 
 
@@ -92,143 +92,143 @@ const reportFilters = [
 
 
 
-const kpi = computed(()=>[
+const kpi = computed(() => [
 
 
-{
-title:"Total Reservasi",
-value:
-stats.value.reservations,
+    {
+        title: "Total Reservasi",
+        value:
+            stats.value.reservations,
 
-icon:"◷",
+        icon: "◷",
 
-trend:"Aktual",
+        trend: "Aktual",
 
-type:"blue"
+        type: "blue"
 
-},
-
-
-{
-title:"Utilisasi Fasilitas",
-value:
-stats.value.usage+"%",
-
-icon:"▦",
-
-trend:"Aktual",
-
-type:"green"
-
-},
+    },
 
 
-{
-title:"Laporan Kerusakan",
-value:
-stats.value.reports,
+    {
+        title: "Utilisasi Fasilitas",
+        value:
+            stats.value.usage + "%",
 
-icon:"⚠",
+        icon: "▦",
 
-trend:"Aktual",
+        trend: "Aktual",
 
-type:"yellow"
+        type: "green"
 
-},
+    },
 
 
-{
-title:"Pengguna Aktif",
+    {
+        title: "Laporan Kerusakan",
+        value:
+            stats.value.reports,
 
-value:
-stats.value.users,
+        icon: "⚠",
 
-icon:"◉",
+        trend: "Aktual",
 
-trend:"Aktual",
+        type: "yellow"
 
-type:"purple"
+    },
 
-}
+
+    {
+        title: "Pengguna Aktif",
+
+        value:
+            stats.value.users,
+
+        icon: "◉",
+
+        trend: "Aktual",
+
+        type: "purple"
+
+    }
 
 
 ]);
 
-async function loadSummary(){
+async function loadSummary() {
     summaryLoading.value = true;
-    try{
+    try {
         const response = await axios.get("/api/admin/facilities/summary", {
-            params:{ period:period.value },
-            timeout:10000
+            params: { period: period.value },
+            timeout: 10000
         });
         const kpis = response.data.kpis || {};
         stats.value = {
-            reservations:kpis.reservations || 0,
-            usage:kpis.usage_rate || 0,
-            reports:kpis.reports || 0,
-            users:kpis.active_users || 0
+            reservations: kpis.reservations || 0,
+            usage: kpis.usage_rate || 0,
+            reports: kpis.reports || 0,
+            users: kpis.active_users || 0
         };
         facilitySummary.value = response.data.facilities || [];
         summaryError.value = "";
-    } catch(error){
+    } catch (error) {
         summaryError.value = "Ringkasan belum dapat dimuat dari server.";
-    } finally{
+    } finally {
         summaryLoading.value = false;
     }
 }
 
-async function loadPendingAccounts(){
-    try{
-        const response = await axios.get('/api/admin/accounts/pending', { timeout:10000 });
+async function loadPendingAccounts() {
+    try {
+        const response = await axios.get('/api/admin/accounts/pending', { timeout: 10000 });
         pendingAccounts.value = response.data.data || [];
         pendingAccountsError.value = '';
-    } catch(error){
+    } catch (error) {
         pendingAccountsError.value = error?.response?.data?.message || 'Antrean verifikasi akun belum dapat dimuat.';
-    } finally{
+    } finally {
         pendingAccountsLoading.value = false;
     }
 }
 
-async function loadAdminReports(){
-    try{
+async function loadAdminReports() {
+    try {
         const response = await axios.get('/api/admin/reports', {
-            params:{
-                limit:20,
-                ...(reportFilter.value === 'all' ? {} : { status:reportFilter.value }),
+            params: {
+                limit: 20,
+                ...(reportFilter.value === 'all' ? {} : { status: reportFilter.value }),
             },
-            timeout:10000,
+            timeout: 10000,
         });
         adminReports.value = response.data.data || [];
         reportCounts.value = response.data.counts || reportCounts.value;
         adminReportsError.value = '';
-    } catch(error){
+    } catch (error) {
         adminReportsError.value = error?.response?.data?.message || 'Data laporan kerusakan belum dapat dimuat.';
-    } finally{
+    } finally {
         adminReportsLoading.value = false;
     }
 }
 
-function changeReportFilter(value){
+function changeReportFilter(value) {
     reportFilter.value = value;
     adminReportsLoading.value = true;
     loadAdminReports();
 }
 
-function userTypeLabel(type){
-    return { mahasiswa:'Mahasiswa', dosen:'Dosen', staf:'Staf' }[type] || type || 'Pengguna';
+function userTypeLabel(type) {
+    return { mahasiswa: 'Mahasiswa', dosen: 'Dosen', staf: 'Staf' }[type] || type || 'Pengguna';
 }
 
-function registeredAt(value){
-    if(!value) return 'Waktu pendaftaran tidak tersedia';
+function registeredAt(value) {
+    if (!value) return 'Waktu pendaftaran tidak tersedia';
     return new Intl.DateTimeFormat('id-ID', {
-        dateStyle:'medium',
-        timeStyle:'short',
-        timeZone:'Asia/Jakarta'
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Jakarta'
     }).format(new Date(value)) + ' WIB';
 }
 
-async function decideAccount(user, action){
-    if(accountBusy.value) return;
+async function decideAccount(user, action) {
+    if (accountBusy.value) return;
     const approving = action === 'approve';
     await notification.confirm({
         title: approving ? 'Setujui akun baru' : 'Tolak pendaftaran akun',
@@ -239,39 +239,39 @@ async function decideAccount(user, action){
         tone: approving ? 'primary' : 'danger',
         onConfirm: async () => {
             accountBusy.value = user.id;
-            try{
+            try {
                 const response = await axios.post(`/api/admin/accounts/${user.id}/${action}`);
                 pendingAccounts.value = pendingAccounts.value.filter(item => item.id !== user.id);
-                if(pendingAccounts.value.length <= 3) accountsExpanded.value = false;
+                if (pendingAccounts.value.length <= 3) accountsExpanded.value = false;
                 notification.success(response.data.message || (approving ? 'Akun berhasil disetujui.' : 'Pendaftaran berhasil ditolak.'));
                 await loadSummary();
-            } catch(error){
+            } catch (error) {
                 throw new Error(error?.response?.data?.message || 'Keputusan akun gagal disimpan. Silakan coba lagi.');
-            } finally{
+            } finally {
                 accountBusy.value = null;
             }
         },
     });
 }
 
-async function approveAllAccounts(){
-    if(accountBusy.value || !pendingAccounts.value.length) return;
+async function approveAllAccounts() {
+    if (accountBusy.value || !pendingAccounts.value.length) return;
     await notification.confirm({
-        title:'Setujui semua akun',
-        message:`Aktifkan seluruh ${pendingAccounts.value.length} akun yang sedang menunggu? Semua pengguna tersebut akan langsung dapat login.`,
-        confirmLabel:'Setujui semua',
-        tone:'primary',
-        onConfirm:async () => {
+        title: 'Setujui semua akun',
+        message: `Aktifkan seluruh ${pendingAccounts.value.length} akun yang sedang menunggu? Semua pengguna tersebut akan langsung dapat login.`,
+        confirmLabel: 'Setujui semua',
+        tone: 'primary',
+        onConfirm: async () => {
             accountBusy.value = 'all';
-            try{
+            try {
                 const response = await axios.post('/api/admin/accounts/approve-all');
                 pendingAccounts.value = [];
                 accountsExpanded.value = false;
                 notification.success(response.data.message || 'Seluruh akun berhasil disetujui.');
                 await loadSummary();
-            } catch(error){
+            } catch (error) {
                 throw new Error(error?.response?.data?.message || 'Persetujuan massal gagal disimpan.');
-            } finally{
+            } finally {
                 accountBusy.value = null;
             }
         },
@@ -333,38 +333,38 @@ const statusBusy = ref(null);
 
 const form = ref({
 
-id:null,
+    id: null,
 
-code:"",
+    code: "",
 
-name:"",
+    name: "",
 
-facility_type_id:"",
+    facility_type_id: "",
 
-location_id:"",
+    location_id: "",
 
-capacity:10,
+    capacity: 10,
 
-description:"",
+    description: "",
 
-status:"active"
+    status: "active"
 
 });
 
-function statusLabel(status){
+function statusLabel(status) {
     return {
-        active:"Aktif",
-        inactive:"Tidak aktif",
-        maintenance:"Pemeliharaan",
-        pending:"Menunggu persetujuan",
-        new:"Baru",
-        in_progress:"Diproses",
-        resolved:"Selesai",
-        rejected:"Ditolak"
+        active: "Aktif",
+        inactive: "Tidak aktif",
+        maintenance: "Pemeliharaan",
+        pending: "Menunggu persetujuan",
+        new: "Baru",
+        in_progress: "Diproses",
+        resolved: "Selesai",
+        rejected: "Ditolak"
     }[status] || status;
 }
 
-function facilityLocation(facility){
+function facilityLocation(facility) {
     return [
         facility.location?.name,
         facility.location?.building,
@@ -372,10 +372,10 @@ function facilityLocation(facility){
     ].filter(Boolean).join(" · ");
 }
 
-function closeModal(){
-    if(saving.value) return;
-    modal.value=false;
-    saveError.value="";
+function closeModal() {
+    if (saving.value) return;
+    modal.value = false;
+    saveError.value = "";
 }
 
 
@@ -385,85 +385,38 @@ function closeModal(){
 
 
 
-async function loadFacilities(){
+async function loadFacilities() {
 
 
-try{
+    try {
 
 
-const res =
-await axios.get(
-"/api/admin/facilities?per_page=100",
-{ timeout:10000 }
-);
-
-
-
-facilities.value =
-res.data.data;
-facilitiesError.value = "";
-
-
-}
-
-catch(err){
-
-facilitiesError.value = "Data fasilitas belum dapat dimuat. Periksa koneksi server.";
-
-console.log(err);
-
-}
-
-finally{
-    facilitiesLoading.value = false;
-}
-
-
-}
+        const res =
+            await axios.get(
+                "/api/admin/facilities?per_page=100",
+                { timeout: 10000 }
+            );
 
 
 
+        facilities.value =
+            res.data.data;
+        facilitiesError.value = "";
 
 
+    }
 
-async function loadMaster(){
+    catch (err) {
 
+        facilitiesError.value = "Data fasilitas belum dapat dimuat. Periksa koneksi server.";
 
-try{
+        console.log(err);
 
+    }
 
-const [
-typeRes,
-locationRes
-]=await Promise.all([
-
-
-axios.get("/api/facility-types"),
-
-
-axios.get("/api/locations")
-
-
-]);
-
-
-
-types.value =
-typeRes.data.data;
-
-
-
-locations.value =
-locationRes.data.data;
-
-
-}
-
-catch(e){
-
-console.log(e);
-
-}
+    finally {
+        facilitiesLoading.value = false;
+    }
 
 
 }
@@ -473,27 +426,74 @@ console.log(e);
 
 
 
-onMounted(()=>{
+async function loadMaster() {
 
 
-loadFacilities();
+    try {
 
 
-loadMaster();
-loadSummary();
-loadPendingAccounts();
-loadAdminReports();
+        const [
+            typeRes,
+            locationRes
+        ] = await Promise.all([
 
-facilitiesTimer = window.setInterval(() => {
+
+            axios.get("/api/facility-types"),
+
+
+            axios.get("/api/locations")
+
+
+        ]);
+
+
+
+        types.value =
+            typeRes.data.data;
+
+
+
+        locations.value =
+            locationRes.data.data;
+
+
+    }
+
+    catch (e) {
+
+        console.log(e);
+
+    }
+
+
+}
+
+
+
+
+
+
+onMounted(() => {
+
+
     loadFacilities();
+
+
+    loadMaster();
+    loadSummary();
     loadPendingAccounts();
     loadAdminReports();
-}, 15000);
+
+    facilitiesTimer = window.setInterval(() => {
+        loadFacilities();
+        loadPendingAccounts();
+        loadAdminReports();
+    }, 15000);
 
 
 });
 
-onUnmounted(()=>window.clearInterval(facilitiesTimer));
+onUnmounted(() => window.clearInterval(facilitiesTimer));
 
 
 
@@ -503,81 +503,36 @@ onUnmounted(()=>window.clearInterval(facilitiesTimer));
 
 
 
-function openCreate(){
+function openCreate() {
 
 
-editing.value=false;
-saveError.value="";
+    editing.value = false;
+    saveError.value = "";
 
 
-form.value={
+    form.value = {
 
-id:null,
+        id: null,
 
-code:"",
+        code: "",
 
-name:"",
+        name: "",
 
-facility_type_id:"",
+        facility_type_id: "",
 
-location_id:"",
+        location_id: "",
 
-capacity:10,
+        capacity: 10,
 
-description:"",
+        description: "",
 
-status:"active"
+        status: "active"
 
-};
-
-
-
-modal.value=true;
-
-
-}
+    };
 
 
 
-
-
-
-function openEdit(item){
-
-
-editing.value=true;
-saveError.value="";
-
-
-form.value={
-
-id:item.id,
-
-code:item.code,
-
-name:item.name,
-
-facility_type_id:
-item.facility_type_id
-||
-item.type?.id,
-
-location_id:
-item.location_id
-||
-item.location?.id,
-
-capacity:item.capacity,
-
-description:item.description || "",
-
-status:item.status
-
-};
-
-
-
-modal.value=true;
+    modal.value = true;
 
 
 }
@@ -587,86 +542,42 @@ modal.value=true;
 
 
 
+function openEdit(item) {
+
+
+    editing.value = true;
+    saveError.value = "";
+
+
+    form.value = {
+
+        id: item.id,
+
+        code: item.code,
+
+        name: item.name,
+
+        facility_type_id:
+            item.facility_type_id
+            ||
+            item.type?.id,
+
+        location_id:
+            item.location_id
+            ||
+            item.location?.id,
+
+        capacity: item.capacity,
+
+        description: item.description || "",
+
+        status: item.status
+
+    };
 
 
 
-async function saveFacility(){
-
-
-saveError.value="";
-
-const payload={
-    code:String(form.value.code || "").trim(),
-    name:String(form.value.name || "").trim(),
-    facility_type_id:form.value.facility_type_id,
-    location_id:form.value.location_id,
-    capacity:Number(form.value.capacity),
-    description:String(form.value.description || "").trim()
-};
-
-if(!payload.code || !payload.name || !payload.facility_type_id || !payload.location_id || !Number.isInteger(payload.capacity) || payload.capacity < 1){
-    saveError.value="Lengkapi kode, nama, tipe, lokasi, dan kapasitas minimal 1.";
-    return;
-}
-
-saving.value=true;
-
-
-try{
-
-
-if(editing.value){
-
-
-await axios.put(
-
-`/api/admin/facilities/${form.value.id}`,
-
-payload
-
-);
-
-
-}
-
-else{
-
-
-await axios.post(
-
-"/api/admin/facilities",
-
-payload
-
-);
-
-
-}
-
-
-
-await loadFacilities();
-modal.value=false;
-notification.success(editing.value
-    ? "Perubahan fasilitas berhasil disimpan."
-    : "Fasilitas baru berhasil ditambahkan.");
-}
-
-catch(error){
-    const validationErrors=error?.response?.data?.errors;
-    saveError.value=validationErrors
-        ? Object.values(validationErrors).flat()[0]
-        : error?.response?.data?.message || "Fasilitas gagal disimpan ke server.";
-}
-
-finally{
-
-
-saving.value=false;
-
-
-}
-
+    modal.value = true;
 
 
 }
@@ -677,8 +588,97 @@ saving.value=false;
 
 
 
-async function toggleStatus(item){
-    if(statusBusy.value || item.status === "maintenance") return;
+
+
+async function saveFacility() {
+
+
+    saveError.value = "";
+
+    const payload = {
+        code: String(form.value.code || "").trim(),
+        name: String(form.value.name || "").trim(),
+        facility_type_id: form.value.facility_type_id,
+        location_id: form.value.location_id,
+        capacity: Number(form.value.capacity),
+        description: String(form.value.description || "").trim()
+    };
+
+    if (!payload.code || !payload.name || !payload.facility_type_id || !payload.location_id || !Number.isInteger(payload.capacity) || payload.capacity < 1) {
+        saveError.value = "Lengkapi kode, nama, tipe, lokasi, dan kapasitas minimal 1.";
+        return;
+    }
+
+    saving.value = true;
+
+
+    try {
+
+
+        if (editing.value) {
+
+
+            await axios.put(
+
+                `/api/admin/facilities/${form.value.id}`,
+
+                payload
+
+            );
+
+
+        }
+
+        else {
+
+
+            await axios.post(
+
+                "/api/admin/facilities",
+
+                payload
+
+            );
+
+
+        }
+
+
+
+        await loadFacilities();
+        modal.value = false;
+        notification.success(editing.value
+            ? "Perubahan fasilitas berhasil disimpan."
+            : "Fasilitas baru berhasil ditambahkan.");
+    }
+
+    catch (error) {
+        const validationErrors = error?.response?.data?.errors;
+        saveError.value = validationErrors
+            ? Object.values(validationErrors).flat()[0]
+            : error?.response?.data?.message || "Fasilitas gagal disimpan ke server.";
+    }
+
+    finally {
+
+
+        saving.value = false;
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+async function toggleStatus(item) {
+    if (statusBusy.value || item.status === "maintenance") return;
     const target = item.status === "active" ? "nonaktif" : "aktif";
     await notification.confirm({
         title: 'Ubah status fasilitas',
@@ -686,16 +686,16 @@ async function toggleStatus(item){
         confirmLabel: `Jadikan ${target}`,
         tone: item.status === "active" ? 'danger' : 'primary',
         onConfirm: async () => {
-            statusBusy.value=item.id;
-            saveError.value="";
-            try{
+            statusBusy.value = item.id;
+            saveError.value = "";
+            try {
                 await axios.patch(`/api/admin/facilities/${item.id}/toggle-status`);
                 notification.success(`Status ${item.name} berhasil diperbarui.`);
                 await loadFacilities();
-            } catch(error){
+            } catch (error) {
                 throw new Error(error?.response?.data?.message || "Status fasilitas gagal diperbarui. Coba lagi.");
-            } finally{
-                statusBusy.value=null;
+            } finally {
+                statusBusy.value = null;
             }
         },
     });
@@ -712,20 +712,20 @@ async function toggleStatus(item){
 
 
 const sortedFacilities =
-computed(()=>{
+    computed(() => {
 
 
-return [...facilities.value]
+        return [...facilities.value]
 
-.sort(
-(a,b)=>
-b.capacity-a.capacity
-)
+            .sort(
+                (a, b) =>
+                    b.capacity - a.capacity
+            )
 
-.slice(0,5);
+            .slice(0, 5);
 
 
-});
+    });
 
 
 
@@ -733,8 +733,8 @@ b.capacity-a.capacity
 
 
 const activities = computed(() => adminReports.value.slice(0, 3).map(report => ({
-    text:`Laporan LAP-${report.id} ${statusLabel(report.status).toLowerCase()} · ${report.facility?.name || 'Fasilitas tidak tersedia'}`,
-    time:registeredAt(report.updated_at || report.created_at),
+    text: `Laporan LAP-${report.id} ${statusLabel(report.status).toLowerCase()} · ${report.facility?.name || 'Fasilitas tidak tersedia'}`,
+    time: registeredAt(report.updated_at || report.created_at),
 })));
 
 
@@ -776,241 +776,112 @@ async function exportReport() {
 <template>
 
 
-<section
-
-class="content-wrap"
-
-id="screen-admin"
-
->
+    <section class="content-wrap" id="screen-admin">
 
 
 
 
 
-<div class="intro-row">
+        <div class="intro-row">
 
 
-<div>
+            <div>
 
 
-<p class="eyebrow">
+                <p class="eyebrow">
 
-RUANGKITA / ADMIN
+                    RUANGKITA / ADMIN
 
-</p>
-
-
-<h1>
-
-Pusat analitik
+                </p>
 
 
+                <h1>
 
-</h1>
-
-
-<p class="subheading">
-
-Monitor penggunaan fasilitas dan kelola seluruh sistem.
-
-</p>
-
-
-</div>
-
-
-<div class="period">
-
-
-<button
-
-v-for="p in periods"
-
-:key="p.value"
-
-:class="{active:period===p.value}"
-
-@click="period=p.value; loadSummary()"
-
->
-
-{{p.label}}
-
-</button>
-
-
-</div>
+                    Pusat analitik
 
 
 
-</div>
+                </h1>
 
 
-<section class="panel account-panel" aria-labelledby="account-verification-title">
-    <div class="panel-header account-panel__header">
-        <div>
-            <h2 id="account-verification-title">Verifikasi akun</h2>
-            <p>Setujui atau tolak akun yang mendaftar secara mandiri.</p>
-        </div>
-        <div class="account-panel__tools">
-            <span class="account-count" :class="{ 'has-pending': pendingAccounts.length }">
-                {{ pendingAccounts.length }} menunggu
-            </span>
-            <button v-if="pendingAccounts.length" type="button" class="approve-all" :disabled="!!accountBusy" @click="approveAllAccounts">
-                {{accountBusy === 'all' ? 'Memproses...' : 'Setujui semua'}}
-            </button>
-        </div>
-    </div>
+                <p class="subheading">
 
-    <p v-if="pendingAccountsError" class="admin-feedback error-box" role="alert">{{pendingAccountsError}}</p>
-    <p v-else-if="pendingAccountsLoading" class="admin-feedback" role="status">Memuat akun yang menunggu persetujuan...</p>
-    <div v-else-if="!pendingAccounts.length" class="account-empty">
-        <strong>Tidak ada akun yang menunggu</strong>
-        <span>Pendaftaran baru akan muncul otomatis di bagian ini.</span>
-    </div>
-    <div v-else class="account-list">
-        <article v-for="user in visiblePendingAccounts" :key="user.id" class="account-row">
-            <div class="account-avatar" aria-hidden="true">{{(user.name || 'P').charAt(0).toUpperCase()}}</div>
-            <div class="account-identity">
-                <strong>{{user.name}}</strong>
-                <a :href="`mailto:${user.email}`">{{user.email}}</a>
-                <small>{{userTypeLabel(user.user_type)}} · Daftar {{registeredAt(user.created_at)}}</small>
+                    Monitor penggunaan fasilitas dan kelola seluruh sistem.
+
+                </p>
+
+
             </div>
-            <div class="account-actions">
-                <button type="button" class="account-reject" :disabled="!!accountBusy" @click="decideAccount(user, 'reject')">
-                    {{accountBusy === user.id ? 'Memproses...' : 'Tolak'}}
+
+
+            <div class="period">
+
+
+                <button v-for="p in periods" :key="p.value" :class="{ active: period === p.value }"
+                    @click="period = p.value; loadSummary()">
+
+                    {{ p.label }}
+
                 </button>
-                <button type="button" class="account-approve" :disabled="!!accountBusy" @click="decideAccount(user, 'approve')">
-                    {{accountBusy === user.id ? 'Memproses...' : 'Setujui'}}
-                </button>
+
+
             </div>
-        </article>
-        <button v-if="pendingAccounts.length > 3" type="button" class="account-expand" :aria-expanded="accountsExpanded" @click="accountsExpanded = !accountsExpanded">
-            {{accountsExpanded ? 'Tampilkan 3 akun saja' : `Lihat semua ${pendingAccounts.length} akun`}}
-        </button>
-    </div>
-</section>
 
 
 
-
-
-
-
-
-<!-- KPI -->
-
-
-<p v-if="saveError && !modal" class="admin-feedback error-box" role="alert">{{saveError}}</p>
-<p v-if="summaryError" class="admin-feedback error-box" role="alert">{{summaryError}}</p>
-
-<div class="stat-grid" :aria-busy="summaryLoading">
-
-
-<article
-
-v-for="item in kpi"
-
-:key="item.title"
-
-class="stat-card"
-
-:class="`is-${item.type}`"
-
->
-
-
-<div
-
-:class="[
-
-'stat-icon',
-
-item.type
-
-]"
-
->
-
-
-{{item.icon}}
-
-</div>
-
-
-
-<div>
-
-
-<span>
-{{item.title}}
-</span>
-
-
-<strong>
-
-{{summaryLoading ? '—' : item.value}}
-
-</strong>
-
-
-<small>
-
-{{item.trend}}
-
-</small>
-
-
-</div>
-
-
-</article>
-
-
-</div>
-
-
-<section class="panel report-live-panel" aria-labelledby="live-reports-title">
-    <div class="panel-header report-live-panel__header">
-        <div>
-            <h2 id="live-reports-title"><span class="live-dot" aria-hidden="true"></span>Laporan kerusakan terkini</h2>
-            <p>Data langsung dari database, diperbarui otomatis setiap 15 detik.</p>
         </div>
-        <span class="report-total">{{reportCounts.all}} laporan</span>
-    </div>
 
-    <div class="report-filter-tabs" aria-label="Filter status laporan">
-        <button v-for="filterItem in reportFilters" :key="filterItem.value" type="button" :aria-pressed="reportFilter === filterItem.value" @click="changeReportFilter(filterItem.value)">
-            {{filterItem.label}} <small>{{reportCounts[filterItem.value] || 0}}</small>
-        </button>
-    </div>
 
-    <p v-if="adminReportsError" class="admin-feedback error-box" role="alert">{{adminReportsError}}</p>
-    <p v-else-if="adminReportsLoading" class="admin-feedback" role="status">Memuat laporan kerusakan...</p>
-    <div v-else-if="!adminReports.length" class="account-empty">
-        <strong>Belum ada laporan {{reportFilter === 'all' ? '' : statusLabel(reportFilter).toLowerCase()}}</strong>
-        <span>Laporan pengguna akan muncul otomatis di bagian ini.</span>
-    </div>
-    <div v-else class="admin-report-list">
-        <article v-for="report in adminReports" :key="report.id" class="admin-report-row">
-            <div class="admin-report-row__top">
+        <section class="panel account-panel" aria-labelledby="account-verification-title">
+            <div class="panel-header account-panel__header">
                 <div>
-                    <strong>{{report.facility?.name || 'Fasilitas tidak tersedia'}}</strong>
-                    <small>LAP-{{report.id}} · {{report.user?.name || 'Pelapor tidak tersedia'}} · {{report.category}}</small>
+                    <h2 id="account-verification-title">Verifikasi akun</h2>
+                    <p>Setujui atau tolak akun yang mendaftar secara mandiri.</p>
                 </div>
-                <span class="report-status" :class="`is-${report.status}`">{{statusLabel(report.status)}}</span>
+                <div class="account-panel__tools">
+                    <span class="account-count" :class="{ 'has-pending': pendingAccounts.length }">
+                        {{ pendingAccounts.length }} menunggu
+                    </span>
+                    <button v-if="pendingAccounts.length" type="button" class="approve-all" :disabled="!!accountBusy"
+                        @click="approveAllAccounts">
+                        {{ accountBusy === 'all' ? 'Memproses...' : 'Setujui semua' }}
+                    </button>
+                </div>
             </div>
-            <p>{{report.description}}</p>
-            <div class="admin-report-meta">
-                <span>{{registeredAt(report.created_at)}}</span>
-                <span v-if="report.handler">Ditangani {{report.handler.name}}</span>
-                <span v-if="report.photos?.length">{{report.photos.length}} foto</span>
+
+            <p v-if="pendingAccountsError" class="admin-feedback error-box" role="alert">{{ pendingAccountsError }}</p>
+            <p v-else-if="pendingAccountsLoading" class="admin-feedback" role="status">Memuat akun yang menunggu
+                persetujuan...</p>
+            <div v-else-if="!pendingAccounts.length" class="account-empty">
+                <strong>Tidak ada akun yang menunggu</strong>
+                <span>Pendaftaran baru akan muncul otomatis di bagian ini.</span>
             </div>
-            <p v-if="report.resolution_note" class="admin-report-note">Catatan: {{report.resolution_note}}</p>
-        </article>
-    </div>
-</section>
+            <div v-else class="account-list">
+                <article v-for="user in visiblePendingAccounts" :key="user.id" class="account-row">
+                    <div class="account-avatar" aria-hidden="true">{{ (user.name || 'P').charAt(0).toUpperCase() }}
+                    </div>
+                    <div class="account-identity">
+                        <strong>{{ user.name }}</strong>
+                        <a :href="`mailto:${user.email}`">{{ user.email }}</a>
+                        <small>{{ userTypeLabel(user.user_type) }} · Daftar {{ registeredAt(user.created_at) }}</small>
+                    </div>
+                    <div class="account-actions">
+                        <button type="button" class="account-reject" :disabled="!!accountBusy"
+                            @click="decideAccount(user, 'reject')">
+                            {{ accountBusy === user.id ? 'Memproses...' : 'Tolak' }}
+                        </button>
+                        <button type="button" class="account-approve" :disabled="!!accountBusy"
+                            @click="decideAccount(user, 'approve')">
+                            {{ accountBusy === user.id ? 'Memproses...' : 'Setujui' }}
+                        </button>
+                    </div>
+                </article>
+                <button v-if="pendingAccounts.length > 3" type="button" class="account-expand"
+                    :aria-expanded="accountsExpanded" @click="accountsExpanded = !accountsExpanded">
+                    {{ accountsExpanded ? 'Tampilkan 3 akun saja' : `Lihat semua ${pendingAccounts.length} akun` }}
+                </button>
+            </div>
+        </section>
 
 
 
@@ -1019,464 +890,460 @@ item.type
 
 
 
-<div class="admin-grid">
+        <!-- KPI -->
+
+
+        <p v-if="saveError && !modal" class="admin-feedback error-box" role="alert">{{ saveError }}</p>
+        <p v-if="summaryError" class="admin-feedback error-box" role="alert">{{ summaryError }}</p>
+
+        <div class="stat-grid" :aria-busy="summaryLoading">
+
+
+            <article v-for="item in kpi" :key="item.title" class="stat-card" :class="`is-${item.type}`">
+
+
+                <div :class="[
+
+                    'stat-icon',
+
+                    item.type
+
+                ]">
+
+
+                    {{ item.icon }}
+
+                </div>
 
 
 
+                <div>
 
 
+                    <span>
+                        {{ item.title }}
+                    </span>
 
 
-<!-- CHART -->
+                    <strong>
 
-<div class="panel">
+                        {{ summaryLoading ? '—' : item.value }}
 
-
-<h2>
-Analitik penggunaan
-</h2>
+                    </strong>
 
 
-<p>
-Persentase pemakaian per fasilitas
-</p>
+                    <small>
+
+                        {{ item.trend }}
+
+                    </small>
 
 
+                </div>
 
 
-<div v-if="summaryLoading" class="chart-state" role="status">Memuat analitik penggunaan...</div>
-<div v-else-if="!chart.length" class="chart-state">Belum ada data penggunaan pada periode ini.</div>
-<div v-else class="usage-chart" aria-label="Grafik utilisasi fasilitas">
-    <article v-for="c in chart" :key="c.id" class="usage-row">
-        <div class="usage-row__header">
-            <div><strong>{{c.name}}</strong><small>{{c.code}}</small></div>
-            <span>{{c.value.toLocaleString('id-ID')}}%</span>
+            </article>
+
+
         </div>
-        <div class="usage-track" role="progressbar" :aria-label="`Utilisasi ${c.name}`" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="c.value">
-            <span class="usage-fill" :style="{ width: (c.value > 0 ? Math.max(c.value, 3) : 0) + '%' }"></span>
+
+
+        <section class="panel report-live-panel" aria-labelledby="live-reports-title">
+            <div class="panel-header report-live-panel__header">
+                <div>
+                    <h2 id="live-reports-title"><span class="live-dot" aria-hidden="true"></span>Laporan kerusakan
+                        terkini</h2>
+                    <p>Data langsung dari database, diperbarui otomatis setiap 15 detik.</p>
+                </div>
+                <span class="report-total">{{ reportCounts.all }} laporan</span>
+            </div>
+
+            <div class="report-filter-tabs" aria-label="Filter status laporan">
+                <button v-for="filterItem in reportFilters" :key="filterItem.value" type="button"
+                    :aria-pressed="reportFilter === filterItem.value" @click="changeReportFilter(filterItem.value)">
+                    {{ filterItem.label }} <small>{{ reportCounts[filterItem.value] || 0 }}</small>
+                </button>
+            </div>
+
+            <p v-if="adminReportsError" class="admin-feedback error-box" role="alert">{{ adminReportsError }}</p>
+            <p v-else-if="adminReportsLoading" class="admin-feedback" role="status">Memuat laporan kerusakan...</p>
+            <div v-else-if="!adminReports.length" class="account-empty">
+                <strong>Belum ada laporan {{ reportFilter === 'all' ? '' :
+                    statusLabel(reportFilter).toLowerCase() }}</strong>
+                <span>Laporan pengguna akan muncul otomatis di bagian ini.</span>
+            </div>
+            <div v-else class="admin-report-list">
+                <article v-for="report in adminReports" :key="report.id" class="admin-report-row">
+                    <div class="admin-report-row__top">
+                        <div>
+                            <strong>{{ report.facility?.name || 'Fasilitas tidak tersedia' }}</strong>
+                            <small>LAP-{{ report.id }} · {{ report.user?.name || 'Pelapor tidak tersedia' }} ·
+                                {{ report.category }}</small>
+                        </div>
+                        <span class="report-status" :class="`is-${report.status}`">{{ statusLabel(report.status)
+                            }}</span>
+                    </div>
+                    <p>{{ report.description }}</p>
+                    <div class="admin-report-meta">
+                        <span>{{ registeredAt(report.created_at) }}</span>
+                        <span v-if="report.handler">Ditangani {{ report.handler.name }}</span>
+                        <span v-if="report.photos?.length">{{ report.photos.length }} foto</span>
+                    </div>
+                    <p v-if="report.resolution_note" class="admin-report-note">Catatan: {{ report.resolution_note }}</p>
+                </article>
+            </div>
+        </section>
+
+
+
+
+
+
+
+
+        <div class="admin-grid">
+
+
+
+
+
+
+
+            <!-- CHART -->
+
+            <div class="panel">
+
+
+                <h2>
+                    Analitik penggunaan
+                </h2>
+
+
+                <p>
+                    Persentase pemakaian per fasilitas
+                </p>
+
+
+
+
+                <div v-if="summaryLoading" class="chart-state" role="status">Memuat analitik penggunaan...</div>
+                <div v-else-if="!chart.length" class="chart-state">Belum ada data penggunaan pada periode ini.</div>
+                <div v-else class="usage-chart" aria-label="Grafik utilisasi fasilitas">
+                    <article v-for="c in chart" :key="c.id" class="usage-row">
+                        <div class="usage-row__header">
+                            <div><strong>{{ c.name }}</strong><small>{{ c.code }}</small></div>
+                            <span>{{ c.value.toLocaleString('id-ID') }}%</span>
+                        </div>
+                        <div class="usage-track" role="progressbar" :aria-label="`Utilisasi ${c.name}`"
+                            aria-valuemin="0" aria-valuemax="100" :aria-valuenow="c.value">
+                            <span class="usage-fill"
+                                :style="{ width: (c.value > 0 ? Math.max(c.value, 3) : 0) + '%' }"></span>
+                        </div>
+                    </article>
+                </div>
+
+
+            </div>
+
+
+
+
+
+
+
+
+            <!-- ACTIVITY -->
+
+
+            <div class="panel">
+
+
+                <h2>
+                    Aktivitas terbaru
+                </h2>
+
+
+
+                <div v-for="a in activities" :key="a.text" class="activity">
+
+
+                    <div></div>
+
+
+                    <p>
+
+                        {{ a.text }}
+
+                        <small>
+
+                            {{ a.time }}
+
+                        </small>
+
+
+                    </p>
+
+
+                </div>
+
+
+                <button type="button" @click="exportReport" :disabled="exporting" class="export">
+
+                    {{ exporting ? 'Mengunduh...' : 'Unduh rekap' }}
+
+                </button>
+
+
+
+            </div>
+
+
+
+
+            <!-- FACILITY -->
+
+            <div class="panel facility-panel">
+
+
+                <div class="panel-header">
+
+
+                    <div>
+
+
+                        <h2>
+                            Manajemen fasilitas
+                        </h2>
+
+
+                        <p>
+                            CRUD fasilitas kampus
+                        </p>
+
+
+                    </div>
+
+
+
+                    <button @click="openCreate">
+
+                        Tambah fasilitas
+
+                    </button>
+
+
+                </div>
+
+
+
+
+
+
+
+
+                <div class="facility-table">
+
+                    <p v-if="facilitiesError" class="admin-feedback error-box">
+                        {{ facilitiesError }}
+                    </p>
+
+                    <p v-else-if="facilitiesLoading" class="admin-feedback">
+                        Memuat data fasilitas...
+                    </p>
+
+                    <div v-else-if="!facilities.length" class="admin-feedback">
+                        Belum ada fasilitas. Tambahkan fasilitas pertama melalui tombol Tambah fasilitas.
+                    </div>
+
+
+                    <div v-for="f in facilities" :key="f.id" class="facility-row">
+
+
+                        <div>
+
+                            <strong>
+                                {{ f.code }}
+                            </strong>
+
+
+                            <p>
+                                {{ f.name }}
+                            </p>
+
+                            <small>
+                                {{ f.type?.name || "Tipe tidak tersedia" }} · {{ facilityLocation(f) }}
+                            </small>
+
+
+                        </div>
+
+
+
+                        <span>
+
+                            {{ f.capacity }} orang
+
+                        </span>
+
+
+
+                        <b :class="f.status">
+
+                            {{ statusLabel(f.status) }}
+
+                        </b>
+
+
+
+                        <div class="facility-actions">
+
+
+                            <button @click="openEdit(f)">
+
+                                Edit
+
+                            </button>
+
+
+
+                            <button @click="toggleStatus(f)"
+                                :disabled="f.status === 'maintenance' || statusBusy === f.id">
+
+                                {{ statusBusy === f.id ? 'Menyimpan...' : f.status === 'maintenance' ? 'Dikelolapetugas'
+                                : f.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}}
+
+                            </button>
+
+
+                        </div>
+
+
+
+                    </div>
+
+
+                </div>
+
+
+
+            </div>
+
+
+            <!-- END ADMIN GRID -->
         </div>
-    </article>
-</div>
 
 
-</div>
 
 
 
 
 
 
+        <!-- MODAL -->
 
 
-<!-- ACTIVITY -->
+        <Teleport to="body">
 
 
-<div class="panel">
+            <div v-if="modal" class="overlay" @click.self="closeModal" @keydown.esc="closeModal">
 
 
-<h2>
-Aktivitas terbaru
-</h2>
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="facility-dialog-title">
 
 
+                    <h2 id="facility-dialog-title">
 
-<div
+                        {{ editing ? 'Edit' : 'Tambah' }} fasilitas
 
-v-for="a in activities"
+                    </h2>
 
-:key="a.text"
+                    <button type="button" class="modal-close" aria-label="Tutup" title="Tutup" :disabled="saving"
+                        @click="closeModal">×</button>
 
-class="activity"
 
->
 
 
-<div></div>
 
+                    <label class="modal-field"><span>Kode fasilitas</span><input v-model="form.code"
+                            aria-label="Kode fasilitas" placeholder="Contoh: RKU-101" required /></label>
 
-<p>
 
-{{a.text}}
 
-<small>
+                    <label class="modal-field"><span>Nama fasilitas</span><input v-model="form.name"
+                            aria-label="Nama fasilitas" placeholder="Nama fasilitas" required /></label>
 
-{{a.time}}
 
-</small>
 
 
-</p>
 
+                    <label class="modal-field"><span>Tipe fasilitas</span><select v-model="form.facility_type_id"
+                            aria-label="Tipe fasilitas" required>
+                            <option value="" disabled>Pilih tipe fasilitas</option>
+                            <option v-for="t in types" :key="t.id" :value="t.id">
+                                {{ t.name }}
+                            </option>
+                        </select></label>
 
-</div>
+                    <label class="modal-field"><span>Lokasi fasilitas</span><select v-model="form.location_id"
+                            aria-label="Lokasi fasilitas" required>
+                            <option value="" disabled>Pilih lokasi</option>
+                            <option v-for="location in locations" :key="location.id" :value="location.id">
+                                {{ location.name }} · {{ location.building }} · Lantai {{ location.floor }}
+                            </option>
+                        </select></label>
 
+                    <label class="modal-field"><span>Deskripsi <small>(opsional)</small></span><textarea
+                            v-model="form.description" aria-label="Deskripsi fasilitas"
+                            placeholder="Deskripsi fasilitas" rows="3"></textarea></label>
 
-<button
 
-type="button"
 
-@click="exportReport"
 
-:disabled="exporting"
 
-class="export"
 
->
+                    <label class="modal-field"><span>Kapasitas</span><input type="number" v-model="form.capacity"
+                            aria-label="Kapasitas fasilitas" placeholder="Kapasitas" min="1" required /></label>
 
-{{ exporting ? 'Mengunduh...' : 'Unduh rekap' }}
 
-</button>
 
 
+                    <p class="modal-helper">Kode, nama, tipe, lokasi, dan kapasitas wajib diisi.</p>
+                    <p v-if="saveError" class="admin-feedback error-box" role="alert">{{ saveError }}</p>
 
-</div>
+                    <div class="modal-action">
 
 
+                        <button type="button" class="wf-button" @click="closeModal">
 
+                            Batal
 
-<!-- FACILITY -->
+                        </button>
 
-<div class="panel facility-panel">
 
+                        <button type="button" class="wf-button wf-primary" @click="saveFacility" :disabled="saving">
 
-<div class="panel-header">
+                            {{ saving ? 'Menyimpan...' : 'Simpan' }}
 
+                        </button>
 
-<div>
 
+                    </div>
 
-<h2>
-Manajemen fasilitas
-</h2>
 
 
-<p>
-CRUD fasilitas kampus
-</p>
+                </div>
 
 
-</div>
+            </div>
 
 
+        </Teleport>
 
-<button
 
-@click="openCreate"
 
->
 
-Tambah fasilitas
 
-</button>
-
-
-</div>
-
-
-
-
-
-
-
-
-<div class="facility-table">
-
-<p v-if="facilitiesError" class="admin-feedback error-box">
-{{facilitiesError}}
-</p>
-
-<p v-else-if="facilitiesLoading" class="admin-feedback">
-Memuat data fasilitas...
-</p>
-
-<div v-else-if="!facilities.length" class="admin-feedback">
-Belum ada fasilitas. Tambahkan fasilitas pertama melalui tombol Tambah fasilitas.
-</div>
-
-
-<div
-
-v-for="f in facilities"
-
-:key="f.id"
-
-class="facility-row"
-
->
-
-
-<div>
-
-<strong>
-{{f.code}}
-</strong>
-
-
-<p>
-{{f.name}}
-</p>
-
-<small>
-{{f.type?.name || "Tipe tidak tersedia"}} · {{facilityLocation(f)}}
-</small>
-
-
-</div>
-
-
-
-<span>
-
-{{f.capacity}} orang
-
-</span>
-
-
-
-<b
-
-:class="f.status"
-
->
-
-{{statusLabel(f.status)}}
-
-</b>
-
-
-
-<div class="facility-actions">
-
-
-<button
-
-@click="openEdit(f)"
-
->
-
-Edit
-
-</button>
-
-
-
-<button
-
-@click="toggleStatus(f)"
-
-:disabled="f.status === 'maintenance' || statusBusy === f.id"
-
->
-
-{{statusBusy === f.id ? 'Menyimpan...' : f.status === 'maintenance' ? 'Dikelola petugas' : f.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}}
-
-</button>
-
-
-</div>
-
-
-
-</div>
-
-
-</div>
-
-
-
-</div>
-
-
-<!-- END ADMIN GRID -->
-</div>
-
-
-
-
-
-
-
-
-<!-- MODAL -->
-
-
-<Teleport to="body">
-
-
-<div
-
-v-if="modal"
-
-class="overlay"
-
-@click.self="closeModal"
-
-@keydown.esc="closeModal"
-
->
-
-
-<div class="modal" role="dialog" aria-modal="true" aria-labelledby="facility-dialog-title">
-
-
-<h2 id="facility-dialog-title">
-
-{{editing?'Edit':'Tambah'}} fasilitas
-
-</h2>
-
-<button type="button" class="modal-close" aria-label="Tutup" title="Tutup" :disabled="saving" @click="closeModal">×</button>
-
-
-
-
-
-<label class="modal-field"><span>Kode fasilitas</span><input
-
-v-model="form.code"
-
-aria-label="Kode fasilitas"
-
-placeholder="Contoh: RKU-101"
-
-required
-
- /></label>
-
-
-
-<label class="modal-field"><span>Nama fasilitas</span><input
-
-v-model="form.name"
-
-aria-label="Nama fasilitas"
-
-placeholder="Nama fasilitas"
-
-required
-
- /></label>
-
-
-
-
-
-<label class="modal-field"><span>Tipe fasilitas</span><select
-v-model="form.facility_type_id"
-aria-label="Tipe fasilitas"
-required
->
-<option value="" disabled>Pilih tipe fasilitas</option>
-<option
-v-for="t in types"
-:key="t.id"
-:value="t.id"
->
-{{t.name}}
-</option>
-</select></label>
-
-<label class="modal-field"><span>Lokasi fasilitas</span><select
-v-model="form.location_id"
-aria-label="Lokasi fasilitas"
-required
->
-<option value="" disabled>Pilih lokasi</option>
-<option
-v-for="location in locations"
-:key="location.id"
-:value="location.id"
->
-{{location.name}} · {{location.building}} · Lantai {{location.floor}}
-</option>
-</select></label>
-
-<label class="modal-field"><span>Deskripsi <small>(opsional)</small></span><textarea
-v-model="form.description"
-aria-label="Deskripsi fasilitas"
-placeholder="Deskripsi fasilitas"
-rows="3"
-></textarea></label>
-
-
-
-
-
-
-<label class="modal-field"><span>Kapasitas</span><input
-
-type="number"
-
-v-model="form.capacity"
-
-aria-label="Kapasitas fasilitas"
-
-placeholder="Kapasitas"
-
-min="1"
-
-required
-
- /></label>
-
-
-
-
-<p class="modal-helper">Kode, nama, tipe, lokasi, dan kapasitas wajib diisi.</p>
-<p v-if="saveError" class="admin-feedback error-box" role="alert">{{saveError}}</p>
-
-<div class="modal-action">
-
-
-<button
-
-type="button"
-
-class="wf-button"
-
-@click="closeModal"
-
->
-
-Batal
-
-</button>
-
-
-<button
-
-type="button"
-
-class="wf-button wf-primary"
-
-@click="saveFacility"
-
-:disabled="saving"
-
->
-
-{{saving?'Menyimpan...':'Simpan'}}
-
-</button>
-
-
-</div>
-
-
-
-</div>
-
-
-</div>
-
-
-</Teleport>
-
-
-
-
-
-</section>
+    </section>
 
 
 </template>
@@ -1490,266 +1357,48 @@ class="wf-button wf-primary"
 
 
 <style scoped>
+.period {
 
 
-
-.period{
-
-
-display:flex;
+    display: flex;
 
 
-background:#f1f5f9;
+    background: #f1f5f9;
 
 
-padding:4px;
+    padding: 4px;
 
 
-border-radius:12px;
+    border-radius: 12px;
 
 
 }
 
 
 
-.period button{
+.period button {
 
 
-padding:8px 15px;
+    padding: 8px 15px;
 
 
-border-radius:9px;
+    border-radius: 9px;
 
 
-font-size:12px;
-
-
-}
-
-
-
-.period .active{
-
-
-background:white;
-
-
-box-shadow:0 3px 10px #0001;
+    font-size: 12px;
 
 
 }
 
 
 
+.period .active {
 
 
-.admin-grid{
+    background: white;
 
 
-display:grid;
-
-
-grid-template-columns:
-1.4fr
-0.6fr;
-
-
-gap:22px;
-
-
-margin-top:30px;
-
-
-}
-
-
-
-.panel{
-
-
-background:white;
-
-
-border:1px solid var(--line);
-
-
-border-radius:25px;
-
-
-padding:25px;
-
-
-}
-
-
-
-.panel h2{
-
-
-margin:0;
-
-
-}
-
-
-
-
-.chart{
-
-
-height:230px;
-
-
-display:flex;
-
-
-align-items:end;
-
-
-gap:15px;
-
-
-margin-top:30px;
-
-
-}
-
-
-
-.bar-wrapper{
-
-
-flex:1;
-
-
-height:100%;
-
-
-display:flex;
-
-
-flex-direction:column;
-
-
-justify-content:end;
-
-
-align-items:center;
-
-
-gap:8px;
-
-
-}
-
-
-
-.bar{
-
-
-width:100%;
-
-
-background:#2563eb;
-
-
-border-radius:10px 10px 0 0;
-
-
-transition:.3s;
-
-
-}
-
-
-
-
-.activity{
-
-
-display:flex;
-
-
-gap:12px;
-
-
-margin:20px 0;
-
-
-}
-
-
-
-.activity div{
-
-
-width:10px;
-
-
-height:10px;
-
-
-border-radius:50%;
-
-
-background:#2563eb;
-
-
-margin-top:5px;
-
-
-}
-
-
-
-.activity p{
-
-
-margin:0;
-
-
-font-size:13px;
-
-
-}
-
-
-
-.activity small{
-
-
-display:block;
-
-
-color:#94a3b8;
-
-
-}
-
-
-
-.export{
-
-
-margin-top:20px;
-
-
-width:100%;
-
-
-padding:12px;
-
-
-border-radius:14px;
-
-
-background:#0f172a;
-
-
-color:white;
-
-
-font-weight:700;
+    box-shadow: 0 3px 10px #0001;
 
 
 }
@@ -1758,334 +1407,516 @@ font-weight:700;
 
 
 
-
-.panel-header{
-
-
-display:flex;
+.admin-grid {
 
 
-justify-content:space-between;
+    display: grid;
 
 
-align-items:center;
+    grid-template-columns:
+        1.4fr 0.6fr;
 
 
-margin-bottom:20px;
+    gap: 22px;
 
 
-}
-
-
-
-.panel-header button{
-
-
-background:#2563eb;
-
-
-color:white;
-
-
-padding:12px 18px;
-
-
-border-radius:12px;
-
-
-font-weight:700;
+    margin-top: 30px;
 
 
 }
 
 
 
-
-.facility-row{
-
-
-display:grid;
+.panel {
 
 
-grid-template-columns:
-2fr
-1fr
-1fr
-auto;
+    background: white;
 
 
-align-items:center;
+    border: 1px solid var(--line);
 
 
-padding:15px;
+    border-radius: 25px;
 
 
-border-bottom:1px solid var(--line);
+    padding: 25px;
 
 
 }
 
 
 
-.facility-row p{
+.panel h2 {
 
 
-margin:3px 0;
-
-
-color:#64748b;
-
-
-font-size:12px;
+    margin: 0;
 
 
 }
 
 
 
-.facility-row b{
+
+.chart {
 
 
-padding:5px 10px;
+    height: 230px;
 
 
-border-radius:999px;
+    display: flex;
 
 
-font-size:10px;
+    align-items: end;
 
 
-}
+    gap: 15px;
 
 
-
-.facility-row .active{
-
-
-background:#dcfce7;
-
-
-color:#15803d;
+    margin-top: 30px;
 
 
 }
 
 
 
-.facility-row .inactive{
+.bar-wrapper {
 
 
-background:#fee2e2;
+    flex: 1;
 
 
-color:#dc2626;
+    height: 100%;
 
 
-}
+    display: flex;
 
 
-
-.overlay{
-
-
-position:fixed;
+    flex-direction: column;
 
 
-inset:0;
+    justify-content: end;
 
 
-background:#0008;
+    align-items: center;
 
 
-display:grid;
-
-
-place-items:center;
-
-
-z-index:999;
-
-padding:16px;
+    gap: 8px;
 
 
 }
 
 
 
-.modal{
+.bar {
 
 
-background:white;
-
-position:relative;
+    width: 100%;
 
 
-width:min(480px, 100%);
-
-max-height:calc(100dvh - 32px);
-
-overflow-y:auto;
+    background: #2563eb;
 
 
-padding:30px;
+    border-radius: 10px 10px 0 0;
 
 
-border-radius:16px;
-
-
-display:grid;
-
-
-gap:15px;
+    transition: .3s;
 
 
 }
 
-.modal-close{
-    position:absolute;
-    top:18px;
-    right:18px;
-    display:grid;
-    width:36px;
-    height:36px;
-    place-items:center;
-    border:1px solid var(--slate-300);
-    border-radius:8px;
-    background:#fff;
-    color:var(--slate-700);
-    font-size:22px;
-    line-height:1;
+
+
+
+.activity {
+
+
+    display: flex;
+
+
+    gap: 12px;
+
+
+    margin: 20px 0;
+
+
 }
 
-.modal h2{
-    padding-right:44px;
+
+
+.activity div {
+
+
+    width: 10px;
+
+
+    height: 10px;
+
+
+    border-radius: 50%;
+
+
+    background: #2563eb;
+
+
+    margin-top: 5px;
+
+
+}
+
+
+
+.activity p {
+
+
+    margin: 0;
+
+
+    font-size: 13px;
+
+
+}
+
+
+
+.activity small {
+
+
+    display: block;
+
+
+    color: #94a3b8;
+
+
+}
+
+
+
+.export {
+
+
+    margin-top: 20px;
+
+
+    width: 100%;
+
+
+    padding: 12px;
+
+
+    border-radius: 14px;
+
+
+    background: #0f172a;
+
+
+    color: white;
+
+
+    font-weight: 700;
+
+
+}
+
+
+
+
+
+
+.panel-header {
+
+
+    display: flex;
+
+
+    justify-content: space-between;
+
+
+    align-items: center;
+
+
+    margin-bottom: 20px;
+
+
+}
+
+
+
+.panel-header button {
+
+
+    background: #2563eb;
+
+
+    color: white;
+
+
+    padding: 12px 18px;
+
+
+    border-radius: 12px;
+
+
+    font-weight: 700;
+
+
+}
+
+
+
+
+.facility-row {
+
+
+    display: grid;
+
+
+    grid-template-columns:
+        2fr 1fr 1fr auto;
+
+
+    align-items: center;
+
+
+    padding: 15px;
+
+
+    border-bottom: 1px solid var(--line);
+
+
+}
+
+
+
+.facility-row p {
+
+
+    margin: 3px 0;
+
+
+    color: #64748b;
+
+
+    font-size: 12px;
+
+
+}
+
+
+
+.facility-row b {
+
+
+    padding: 5px 10px;
+
+
+    border-radius: 999px;
+
+
+    font-size: 10px;
+
+
+}
+
+
+
+.facility-row .active {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.facility-row .inactive {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #0008;
+    display: grid;
+    place-items: center;
+    z-index: 999;
+    padding: 16px;
+}
+
+
+
+.modal {
+
+
+    background: white;
+
+    position: relative;
+
+
+    width: min(480px, 100%);
+
+    max-height: calc(100dvh - 32px);
+
+    overflow-y: auto;
+
+
+    padding: 30px;
+
+
+    border-radius: 16px;
+
+
+    display: grid;
+
+
+    gap: 15px;
+
+
+}
+
+.modal-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid var(--slate-300);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--slate-700);
+    font-size: 22px;
+    line-height: 1;
+}
+
+.modal h2 {
+    padding-right: 44px;
 }
 
 
 
 .modal input,
 .modal select,
-.modal textarea{
+.modal textarea {
 
 
-padding:12px;
+    padding: 12px;
 
 
-border-radius:12px;
+    border-radius: 12px;
 
 
-border:1px solid #ddd;
+    border: 1px solid #ddd;
 
 
 }
 
-.modal-field{
-    display:grid;
-    gap:7px;
-    color:var(--slate-700);
-    font-size:13px;
-    font-weight:700;
+.modal-field {
+    display: grid;
+    gap: 7px;
+    color: var(--slate-700);
+    font-size: 13px;
+    font-weight: 700;
 }
 
-.modal-field small{
-    font-weight:500;
+.modal-field small {
+    font-weight: 500;
 }
 
 .modal-field input,
 .modal-field select,
-.modal-field textarea{
-    width:100%;
-    min-width:0;
-    color:var(--slate-900);
-    font:inherit;
-    font-weight:400;
+.modal-field textarea {
+    width: 100%;
+    min-width: 0;
+    color: var(--slate-900);
+    font: inherit;
+    font-weight: 400;
 }
 
-.modal-helper{
-    margin:0;
-    color:var(--slate-600);
-    font-size:12px;
-    line-height:1.5;
-}
-
-
-
-.modal-action{
-
-
-display:flex;
-
-
-justify-content:end;
-
-
-gap:10px;
-
-
+.modal-helper {
+    margin: 0;
+    color: var(--slate-600);
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 
 
-.admin-feedback{
-    margin:0;
-    padding:24px 16px;
-    border:1px dashed var(--line);
-    border-radius:12px;
-    color:var(--muted);
-    text-align:center;
-    font-size:13px;
+.modal-action {
+
+
+    display: flex;
+
+
+    justify-content: end;
+
+
+    gap: 10px;
+
+
 }
 
-.admin-feedback.error-box{
-    border-style:solid;
-    border-color:#fecaca;
-    background:#fef2f2;
-    color:var(--danger);
+
+
+.admin-feedback {
+    margin: 0;
+    padding: 24px 16px;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    color: var(--muted);
+    text-align: center;
+    font-size: 13px;
 }
 
-.admin-feedback.success-box{
-    margin-bottom:16px;
-    border-style:solid;
-    border-color:#bbf7d0;
-    background:#f0fdf4;
-    color:#166534;
+.admin-feedback.error-box {
+    border-style: solid;
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: var(--danger);
+}
+
+.admin-feedback.success-box {
+    margin-bottom: 16px;
+    border-style: solid;
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
 }
 
 .modal :focus-visible,
-#screen-admin button:focus-visible{
-    outline:3px solid var(--blue-200);
-    outline-offset:2px;
-}
-
- 
-
-
-
-
-
-@media(max-width:900px){
-
-
-.admin-grid{
-
-
-grid-template-columns:1fr;
-
-
+#screen-admin button:focus-visible {
+    outline: 3px solid var(--blue-200);
+    outline-offset: 2px;
 }
 
 
 
-.facility-row{
 
 
-grid-template-columns:1fr;
 
 
-gap:10px;
+@media(max-width:900px) {
 
 
-}
+    .admin-grid {
+
+
+        grid-template-columns: 1fr;
+
+
+    }
+
+
+
+    .facility-row {
+
+
+        grid-template-columns: 1fr;
+
+
+        gap: 10px;
+
+
+    }
 
 
 }
@@ -2163,13 +1994,13 @@ gap:10px;
     border-radius: 9px;
 }
 
-#screen-admin .stat-card > div:last-child span,
-#screen-admin .stat-card > div:last-child small {
+#screen-admin .stat-card>div:last-child span,
+#screen-admin .stat-card>div:last-child small {
     color: #64748b;
     font-size: 11px;
 }
 
-#screen-admin .stat-card > div:last-child strong {
+#screen-admin .stat-card>div:last-child strong {
     display: block;
     margin: 6px 0 4px;
     color: #0f172a;
@@ -2194,7 +2025,7 @@ gap:10px;
     color: #0f172a;
 }
 
-#screen-admin .panel > p,
+#screen-admin .panel>p,
 #screen-admin .panel-header p {
     color: #64748b;
     font-size: 11px;
@@ -2209,96 +2040,108 @@ gap:10px;
 }
 
 #screen-admin .usage-chart {
-    display:grid;
-    gap:16px;
-    max-height:320px;
-    margin-top:22px;
-    padding-right:6px;
-    overflow-y:auto;
-    overscroll-behavior:contain;
-    scrollbar-gutter:stable;
+    display: grid;
+    gap: 16px;
+    max-height: 320px;
+    margin-top: 22px;
+    padding-right: 6px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
-#screen-admin .usage-chart::-webkit-scrollbar { width:6px; }
-#screen-admin .usage-chart::-webkit-scrollbar-track { background:transparent; }
-#screen-admin .usage-chart::-webkit-scrollbar-thumb { border-radius:999px; background:var(--slate-300); }
-#screen-admin .usage-chart::-webkit-scrollbar-thumb:hover { background:var(--slate-400); }
+#screen-admin .usage-chart::-webkit-scrollbar {
+    width: 6px;
+}
+
+#screen-admin .usage-chart::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#screen-admin .usage-chart::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--slate-300);
+}
+
+#screen-admin .usage-chart::-webkit-scrollbar-thumb:hover {
+    background: var(--slate-400);
+}
 
 #screen-admin .usage-row {
-    display:grid;
-    gap:8px;
+    display: grid;
+    gap: 8px;
 }
 
 #screen-admin .usage-row__header {
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:16px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
 }
 
-#screen-admin .usage-row__header > div {
-    min-width:0;
+#screen-admin .usage-row__header>div {
+    min-width: 0;
 }
 
 #screen-admin .usage-row__header strong,
 #screen-admin .usage-row__header small {
-    display:block;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #screen-admin .usage-row__header strong {
-    color:var(--slate-800);
-    font-size:13px;
+    color: var(--slate-800);
+    font-size: 13px;
 }
 
 #screen-admin .usage-row__header small {
-    margin-top:2px;
-    color:var(--slate-500);
-    font-size:10px;
+    margin-top: 2px;
+    color: var(--slate-500);
+    font-size: 10px;
 }
 
-#screen-admin .usage-row__header > span {
-    flex-shrink:0;
-    min-width:48px;
-    padding:3px 8px;
-    border-radius:999px;
-    background:var(--blue-50);
-    color:var(--blue-800);
-    font-size:11px;
-    font-weight:800;
-    text-align:center;
+#screen-admin .usage-row__header>span {
+    flex-shrink: 0;
+    min-width: 48px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--blue-50);
+    color: var(--blue-800);
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
 }
 
 #screen-admin .usage-track {
-    height:10px;
-    overflow:hidden;
-    border:1px solid var(--blue-100);
-    border-radius:999px;
-    background:var(--slate-100);
+    height: 10px;
+    overflow: hidden;
+    border: 1px solid var(--blue-100);
+    border-radius: 999px;
+    background: var(--slate-100);
 }
 
 #screen-admin .usage-fill {
-    display:block;
-    height:100%;
-    border-radius:inherit;
-    background:linear-gradient(90deg, var(--blue-600), var(--blue-400));
-    box-shadow:0 0 12px rgba(37,99,235,.24);
-    transition:width .35s ease;
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--blue-600), var(--blue-400));
+    box-shadow: 0 0 12px rgba(37, 99, 235, .24);
+    transition: width .35s ease;
 }
 
 #screen-admin .chart-state {
-    display:grid;
-    min-height:220px;
-    place-items:center;
-    margin-top:18px;
-    border:1px dashed var(--slate-300);
-    border-radius:12px;
-    background:var(--slate-50);
-    color:var(--slate-600);
-    font-size:13px;
-    text-align:center;
+    display: grid;
+    min-height: 220px;
+    place-items: center;
+    margin-top: 18px;
+    border: 1px dashed var(--slate-300);
+    border-radius: 12px;
+    background: var(--slate-50);
+    color: var(--slate-600);
+    font-size: 13px;
+    text-align: center;
 }
 
 #screen-admin .bar-wrapper {
@@ -2330,481 +2173,668 @@ gap:10px;
 }
 
 #screen-admin .account-panel {
-    margin-bottom:24px;
+    margin-bottom: 24px;
 }
 
 #screen-admin .account-panel__header {
-    margin-bottom:16px;
+    margin-bottom: 16px;
 }
 
 #screen-admin .account-panel__tools {
-    display:flex;
-    align-items:center;
-    gap:8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 #screen-admin .account-count {
-    flex-shrink:0;
-    padding:6px 10px;
-    border-radius:999px;
-    background:var(--slate-100);
-    color:var(--slate-600);
-    font-size:11px;
-    font-weight:800;
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--slate-100);
+    color: var(--slate-600);
+    font-size: 11px;
+    font-weight: 800;
 }
 
 #screen-admin .account-count.has-pending {
-    background:#fff7ed;
-    color:#c2410c;
+    background: #fff7ed;
+    color: #c2410c;
 }
 
 #screen-admin .approve-all {
-    min-height:36px;
-    padding:0 12px;
-    border:1px solid var(--blue-600);
-    border-radius:8px;
-    background:var(--blue-600);
-    color:#fff;
-    font:inherit;
-    font-size:11px;
-    font-weight:800;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--blue-600);
+    border-radius: 8px;
+    background: var(--blue-600);
+    color: #fff;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 800;
 }
 
-#screen-admin .approve-all:disabled { cursor:wait; opacity:.6; }
+#screen-admin .approve-all:disabled {
+    cursor: wait;
+    opacity: .6;
+}
 
 #screen-admin .account-list {
-    display:grid;
-    gap:10px;
+    display: grid;
+    gap: 10px;
 }
 
 #screen-admin .account-row {
-    display:grid;
-    grid-template-columns:auto minmax(0, 1fr) auto;
-    align-items:center;
-    gap:14px;
-    padding:14px;
-    border:1px solid var(--slate-200);
-    border-radius:12px;
-    background:var(--slate-50);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--slate-200);
+    border-radius: 12px;
+    background: var(--slate-50);
 }
 
 #screen-admin .account-avatar {
-    display:grid;
-    width:42px;
-    height:42px;
-    place-items:center;
-    border-radius:10px;
-    background:var(--blue-100);
-    color:var(--blue-800);
-    font-size:15px;
-    font-weight:800;
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--blue-100);
+    color: var(--blue-800);
+    font-size: 15px;
+    font-weight: 800;
 }
 
 #screen-admin .account-identity {
-    min-width:0;
+    min-width: 0;
 }
 
 #screen-admin .account-identity strong,
 #screen-admin .account-identity a,
 #screen-admin .account-identity small {
-    display:block;
-    overflow-wrap:anywhere;
+    display: block;
+    overflow-wrap: anywhere;
 }
 
-#screen-admin .account-identity strong { color:var(--slate-900); font-size:14px; }
-#screen-admin .account-identity a { margin-top:2px; color:var(--blue-700); font-size:12px; }
-#screen-admin .account-identity small { margin-top:5px; color:var(--slate-500); font-size:11px; }
+#screen-admin .account-identity strong {
+    color: var(--slate-900);
+    font-size: 14px;
+}
+
+#screen-admin .account-identity a {
+    margin-top: 2px;
+    color: var(--blue-700);
+    font-size: 12px;
+}
+
+#screen-admin .account-identity small {
+    margin-top: 5px;
+    color: var(--slate-500);
+    font-size: 11px;
+}
 
 #screen-admin .account-actions {
-    display:flex;
-    gap:8px;
+    display: flex;
+    gap: 8px;
 }
 
 #screen-admin .account-actions button {
-    min-height:38px;
-    padding:0 14px;
-    border-radius:8px;
-    font:inherit;
-    font-size:12px;
-    font-weight:700;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
 }
 
-#screen-admin .account-reject { border:1px solid #fecaca; background:#fff; color:#b91c1c; }
-#screen-admin .account-approve { border:1px solid var(--blue-600); background:var(--blue-600); color:#fff; }
-#screen-admin .account-actions button:disabled { cursor:wait; opacity:.6; }
+#screen-admin .account-reject {
+    border: 1px solid #fecaca;
+    background: #fff;
+    color: #b91c1c;
+}
+
+#screen-admin .account-approve {
+    border: 1px solid var(--blue-600);
+    background: var(--blue-600);
+    color: #fff;
+}
+
+#screen-admin .account-actions button:disabled {
+    cursor: wait;
+    opacity: .6;
+}
 
 #screen-admin .account-expand {
-    width:100%;
-    min-height:40px;
-    border:1px solid var(--slate-200);
-    border-radius:8px;
-    background:#fff;
-    color:var(--blue-700);
-    font:inherit;
-    font-size:12px;
-    font-weight:700;
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid var(--slate-200);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--blue-700);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
 }
 
 #screen-admin .account-empty {
-    display:grid;
-    gap:4px;
-    padding:20px;
-    border:1px dashed var(--slate-300);
-    border-radius:12px;
-    background:var(--slate-50);
-    color:var(--slate-600);
-    text-align:center;
+    display: grid;
+    gap: 4px;
+    padding: 20px;
+    border: 1px dashed var(--slate-300);
+    border-radius: 12px;
+    background: var(--slate-50);
+    color: var(--slate-600);
+    text-align: center;
 }
 
-#screen-admin .account-empty strong { color:var(--slate-800); font-size:13px; }
-#screen-admin .account-empty span { font-size:11px; }
+#screen-admin .account-empty strong {
+    color: var(--slate-800);
+    font-size: 13px;
+}
+
+#screen-admin .account-empty span {
+    font-size: 11px;
+}
 
 #screen-admin .report-live-panel {
-    margin-bottom:24px;
+    margin-bottom: 24px;
 }
 
 #screen-admin .report-live-panel__header h2 {
-    display:flex;
-    align-items:center;
-    gap:8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 #screen-admin .live-dot {
-    width:8px;
-    height:8px;
-    border-radius:50%;
-    background:var(--success);
-    box-shadow:0 0 0 4px #dcfce7;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 4px #dcfce7;
 }
 
 #screen-admin .report-total {
-    flex-shrink:0;
-    padding:6px 10px;
-    border-radius:999px;
-    background:var(--blue-50);
-    color:var(--blue-700);
-    font-size:11px;
-    font-weight:800;
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--blue-50);
+    color: var(--blue-700);
+    font-size: 11px;
+    font-weight: 800;
 }
 
 #screen-admin .report-filter-tabs {
-    display:flex;
-    gap:6px;
-    margin:0 0 16px;
-    overflow-x:auto;
-    scrollbar-width:thin;
+    display: flex;
+    gap: 6px;
+    margin: 0 0 16px;
+    overflow-x: auto;
+    scrollbar-width: thin;
 }
 
 #screen-admin .report-filter-tabs button {
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    min-height:36px;
-    padding:0 12px;
-    border:1px solid var(--slate-200);
-    border-radius:8px;
-    background:#fff;
-    color:var(--slate-600);
-    font:inherit;
-    font-size:11px;
-    font-weight:700;
-    white-space:nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--slate-200);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--slate-600);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
 }
 
 #screen-admin .report-filter-tabs button[aria-pressed="true"] {
-    border-color:var(--blue-600);
-    background:var(--blue-50);
-    color:var(--blue-700);
+    border-color: var(--blue-600);
+    background: var(--blue-50);
+    color: var(--blue-700);
 }
 
 #screen-admin .report-filter-tabs small {
-    padding:2px 6px;
-    border-radius:999px;
-    background:var(--slate-100);
-    color:inherit;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: var(--slate-100);
+    color: inherit;
 }
 
 #screen-admin .admin-report-list {
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:10px;
-    max-height:520px;
-    overflow-y:auto;
-    padding-right:4px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 #screen-admin .admin-report-row {
-    display:grid;
-    align-content:start;
-    gap:9px;
-    padding:14px;
-    border:1px solid var(--slate-200);
-    border-radius:12px;
-    background:var(--slate-50);
+    display: grid;
+    align-content: start;
+    gap: 9px;
+    padding: 14px;
+    border: 1px solid var(--slate-200);
+    border-radius: 12px;
+    background: var(--slate-50);
 }
 
 #screen-admin .admin-report-row__top {
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-#screen-admin .admin-report-row__top > div { min-width:0; }
-#screen-admin .admin-report-row__top strong { display:block; color:var(--slate-900); font-size:13px; }
-#screen-admin .admin-report-row__top small { display:block; margin-top:3px; color:var(--slate-500); font-size:10px; overflow-wrap:anywhere; }
-#screen-admin .admin-report-row > p { margin:0; color:var(--slate-700); font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+#screen-admin .admin-report-row__top>div {
+    min-width: 0;
+}
+
+#screen-admin .admin-report-row__top strong {
+    display: block;
+    color: var(--slate-900);
+    font-size: 13px;
+}
+
+#screen-admin .admin-report-row__top small {
+    display: block;
+    margin-top: 3px;
+    color: var(--slate-500);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+#screen-admin .admin-report-row>p {
+    margin: 0;
+    color: var(--slate-700);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
 
 #screen-admin .report-status {
-    flex-shrink:0;
-    padding:5px 8px;
-    border-radius:999px;
-    background:var(--slate-100);
-    color:var(--slate-700);
-    font-size:10px;
-    font-weight:800;
+    flex-shrink: 0;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: var(--slate-100);
+    color: var(--slate-700);
+    font-size: 10px;
+    font-weight: 800;
 }
 
-#screen-admin .report-status.is-new { background:#eff6ff; color:#1d4ed8; }
-#screen-admin .report-status.is-in_progress { background:#fff7ed; color:#c2410c; }
-#screen-admin .report-status.is-resolved { background:#dcfce7; color:#15803d; }
-#screen-admin .report-status.is-rejected { background:#fee2e2; color:#b91c1c; }
+#screen-admin .report-status.is-new {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+#screen-admin .report-status.is-in_progress {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+#screen-admin .report-status.is-resolved {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+#screen-admin .report-status.is-rejected {
+    background: #fee2e2;
+    color: #b91c1c;
+}
 
 #screen-admin .admin-report-meta {
-    display:flex;
-    flex-wrap:wrap;
-    gap:5px 12px;
-    color:var(--slate-500);
-    font-size:10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 12px;
+    color: var(--slate-500);
+    font-size: 10px;
 }
 
 #screen-admin .admin-report-note {
-    padding-top:8px;
-    border-top:1px dashed var(--slate-300);
-    color:var(--slate-600) !important;
+    padding-top: 8px;
+    border-top: 1px dashed var(--slate-300);
+    color: var(--slate-600) !important;
 }
 
 @media (max-width: 1000px) {
-    #screen-admin .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #screen-admin .stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 720px) {
-    .content-wrap#screen-admin { padding: 24px 16px 42px; }
-    #screen-admin .intro-row { align-items: flex-start; flex-direction: column; }
-    #screen-admin .admin-grid { grid-template-columns: 1fr; }
-    #screen-admin .facility-panel { grid-column: auto; }
-    .modal { padding:22px 18px; }
-    .modal-action { flex-direction:column-reverse; }
-    .modal-action button { width:100%; min-height:42px; }
-    #screen-admin .account-panel__header { align-items:flex-start; }
-    #screen-admin .account-panel__tools { width:100%; justify-content:space-between; }
-    #screen-admin .account-row { grid-template-columns:auto minmax(0, 1fr); }
-    #screen-admin .account-actions { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; }
-    #screen-admin .admin-report-list { grid-template-columns:1fr; max-height:620px; }
+    .content-wrap#screen-admin {
+        padding: 24px 16px 42px;
+    }
+
+    #screen-admin .intro-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    #screen-admin .admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #screen-admin .facility-panel {
+        grid-column: auto;
+    }
+
+    .modal {
+        padding: 22px 18px;
+    }
+
+    .modal-action {
+        flex-direction: column-reverse;
+    }
+
+    .modal-action button {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    #screen-admin .account-panel__header {
+        align-items: flex-start;
+    }
+
+    #screen-admin .account-panel__tools {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    #screen-admin .account-row {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    #screen-admin .account-actions {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #screen-admin .admin-report-list {
+        grid-template-columns: 1fr;
+        max-height: 620px;
+    }
 }
 
 /* Final admin layout contract. */
 .content-wrap#screen-admin {
-    width:min(100%, 1320px);
-    padding:32px clamp(20px, 3vw, 40px) 56px;
+    width: min(100%, 1320px);
+    padding: 32px clamp(20px, 3vw, 40px) 56px;
 }
 
 #screen-admin .intro-row {
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:20px;
-    margin-bottom:24px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
 }
 
 #screen-admin h1 {
-    margin:5px 0 0;
-    font-size:clamp(28px, 3vw, 38px);
-    line-height:1.15;
-    letter-spacing:-1.2px;
+    margin: 5px 0 0;
+    font-size: clamp(28px, 3vw, 38px);
+    line-height: 1.15;
+    letter-spacing: -1.2px;
 }
 
 #screen-admin .period {
-    flex-shrink:0;
-    gap:2px;
-    padding:4px;
+    flex-shrink: 0;
+    gap: 2px;
+    padding: 4px;
 }
 
 #screen-admin .period button {
-    min-height:36px;
-    padding:7px 12px;
-    border:0;
-    background:transparent;
-    white-space:nowrap;
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 0;
+    background: transparent;
+    white-space: nowrap;
 }
 
 #screen-admin .stat-grid {
-    display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
-    gap:14px;
-    margin:0 0 18px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin: 0 0 18px;
 }
 
 #screen-admin .stat-card {
-    display:flex;
-    min-width:0;
-    min-height:112px;
-    align-items:center;
-    gap:14px;
-    padding:18px;
-    border:1px solid var(--slate-200);
-    border-radius:14px;
-    background:#fff;
-    box-shadow:0 8px 24px rgba(15,23,42,.05);
+    display: flex;
+    min-width: 0;
+    min-height: 112px;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid var(--slate-200);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
 }
 
-#screen-admin .stat-card > div:last-child {
-    min-width:0;
+#screen-admin .stat-card>div:last-child {
+    min-width: 0;
 }
 
-#screen-admin .stat-card > div:last-child span {
-    display:block;
-    overflow-wrap:anywhere;
+#screen-admin .stat-card>div:last-child span {
+    display: block;
+    overflow-wrap: anywhere;
 }
 
 .app-shell #screen-admin .stat-card.is-blue,
 .app-shell #screen-admin .stat-card.is-blue .stat-icon,
-.app-shell #screen-admin .stat-card.is-blue > div:last-child span,
-.app-shell #screen-admin .stat-card.is-blue > div:last-child strong,
-.app-shell #screen-admin .stat-card.is-blue > div:last-child small {
-    color:#fff;
+.app-shell #screen-admin .stat-card.is-blue>div:last-child span,
+.app-shell #screen-admin .stat-card.is-blue>div:last-child strong,
+.app-shell #screen-admin .stat-card.is-blue>div:last-child small {
+    color: #fff;
 }
 
 #screen-admin .admin-grid {
-    display:grid;
-    grid-template-columns:minmax(0, 1.55fr) minmax(280px, .75fr);
-    column-gap:20px;
-    row-gap:24px;
-    margin:0;
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr);
+    column-gap: 20px;
+    row-gap: 24px;
+    margin: 0;
 }
 
 #screen-admin .panel {
-    min-width:0;
-    padding:20px;
-    border:1px solid var(--slate-200);
-    border-radius:14px;
-    background:#fff;
-    box-shadow:0 8px 24px rgba(15,23,42,.04);
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--slate-200);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .04);
 }
 
 #screen-admin .chart {
-    width:100%;
-    min-width:0;
-    height:220px;
-    gap:10px;
-    overflow:hidden;
+    width: 100%;
+    min-width: 0;
+    height: 220px;
+    gap: 10px;
+    overflow: hidden;
 }
 
 #screen-admin .bar-wrapper span {
-    max-width:100%;
-    overflow:hidden;
-    color:var(--slate-600);
-    font-size:10px;
-    text-overflow:ellipsis;
-    white-space:nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--slate-600);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #screen-admin .panel-header {
-    gap:16px;
-    margin-bottom:12px;
+    gap: 16px;
+    margin-bottom: 12px;
 }
 
 #screen-admin .panel-header button,
 #screen-admin .facility-actions button {
-    min-height:38px;
-    padding:8px 13px;
-    border:1px solid var(--slate-300);
-    border-radius:8px;
-    background:#fff;
-    color:var(--slate-700);
-    font:inherit;
-    font-size:12px;
-    font-weight:700;
-    white-space:nowrap;
+    min-height: 38px;
+    padding: 8px 13px;
+    border: 1px solid var(--slate-300);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--slate-700);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
 }
 
 #screen-admin .panel-header button {
-    border-color:var(--blue-600);
-    background:var(--blue-600);
-    color:#fff;
+    border-color: var(--blue-600);
+    background: var(--blue-600);
+    color: #fff;
 }
 
 #screen-admin .facility-table {
-    min-width:0;
+    min-width: 0;
 }
 
 #screen-admin .facility-row {
-    display:grid;
-    grid-template-columns:minmax(220px, 1.7fr) minmax(90px, .45fr) minmax(90px, .45fr) auto;
-    align-items:center;
-    gap:16px;
-    padding:16px 0;
+    display: grid;
+    grid-template-columns: minmax(220px, 1.7fr) minmax(90px, .45fr) minmax(90px, .45fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0;
 }
 
-#screen-admin .facility-row > * {
-    min-width:0;
+#screen-admin .facility-row>* {
+    min-width: 0;
 }
 
 #screen-admin .facility-row small {
-    display:block;
-    overflow-wrap:anywhere;
-    color:var(--slate-600);
+    display: block;
+    overflow-wrap: anywhere;
+    color: var(--slate-600);
 }
 
 #screen-admin .facility-row b {
-    justify-self:start;
-    white-space:nowrap;
+    justify-self: start;
+    white-space: nowrap;
 }
 
 #screen-admin .facility-actions {
-    display:flex;
-    justify-content:flex-end;
-    gap:8px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 #screen-admin .facility-actions button:last-child {
-    border-color:#fecaca;
-    color:#b91c1c;
+    border-color: #fecaca;
+    color: #b91c1c;
 }
 
 @media (max-width:1000px) {
-    #screen-admin .stat-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-    #screen-admin .admin-grid { grid-template-columns:1fr; row-gap:18px; }
-    #screen-admin .facility-panel { grid-column:auto; }
+    #screen-admin .stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #screen-admin .admin-grid {
+        grid-template-columns: 1fr;
+        row-gap: 18px;
+    }
+
+    #screen-admin .facility-panel {
+        grid-column: auto;
+    }
 }
 
 @media (max-width:720px) {
-    .content-wrap#screen-admin { padding:24px 16px 40px; }
-    #screen-admin .intro-row { align-items:flex-start; flex-direction:column; margin-bottom:18px; }
-    #screen-admin .period { width:100%; overflow:hidden; }
-    #screen-admin .period button { min-width:0; flex:1; }
-    #screen-admin .stat-grid { gap:10px; }
-    #screen-admin .stat-card { min-height:100px; padding:14px; gap:10px; }
-    #screen-admin .panel { padding:16px; }
-    #screen-admin .chart { height:190px; }
-    #screen-admin .usage-chart { max-height:280px; }
-    #screen-admin .panel-header { align-items:flex-start; }
-    #screen-admin .facility-row {
-        grid-template-columns:minmax(0, 1fr) auto;
-        gap:10px 14px;
-        padding:16px 0;
+    .content-wrap#screen-admin {
+        padding: 24px 16px 40px;
     }
-    #screen-admin .facility-row > div:first-child { grid-column:1 / -1; }
-    #screen-admin .facility-actions { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; }
-    #screen-admin .facility-actions button { width:100%; }
+
+    #screen-admin .intro-row {
+        align-items: flex-start;
+        flex-direction: column;
+        margin-bottom: 18px;
+    }
+
+    #screen-admin .period {
+        width: 100%;
+        overflow: hidden;
+    }
+
+    #screen-admin .period button {
+        min-width: 0;
+        flex: 1;
+    }
+
+    #screen-admin .stat-grid {
+        gap: 10px;
+    }
+
+    #screen-admin .stat-card {
+        min-height: 100px;
+        padding: 14px;
+        gap: 10px;
+    }
+
+    #screen-admin .panel {
+        padding: 16px;
+    }
+
+    #screen-admin .chart {
+        height: 190px;
+    }
+
+    #screen-admin .usage-chart {
+        max-height: 280px;
+    }
+
+    #screen-admin .panel-header {
+        align-items: flex-start;
+    }
+
+    #screen-admin .facility-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px 14px;
+        padding: 16px 0;
+    }
+
+    #screen-admin .facility-row>div:first-child {
+        grid-column: 1 / -1;
+    }
+
+    #screen-admin .facility-actions {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #screen-admin .facility-actions button {
+        width: 100%;
+    }
 }
 
 @media (max-width:420px) {
-    #screen-admin .stat-grid { grid-template-columns:1fr; }
-    #screen-admin .stat-card { min-height:88px; }
-    #screen-admin .panel-header { flex-direction:column; }
-    #screen-admin .panel-header button { width:100%; }
-    #screen-admin .account-panel__tools { flex-wrap:wrap; }
-    #screen-admin .account-panel__tools .account-count { width:auto; }
+    #screen-admin .stat-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #screen-admin .stat-card {
+        min-height: 88px;
+    }
+
+    #screen-admin .panel-header {
+        flex-direction: column;
+    }
+
+    #screen-admin .panel-header button {
+        width: 100%;
+    }
+
+    #screen-admin .account-panel__tools {
+        flex-wrap: wrap;
+    }
+
+    #screen-admin .account-panel__tools .account-count {
+        width: auto;
+    }
 }
 </style>
