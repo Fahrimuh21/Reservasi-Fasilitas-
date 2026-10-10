@@ -462,11 +462,11 @@ rejected
 
 | Anggota | Modul | Tanggung Jawab |
 |---|---|---|
-| Anggota 1 | Authentication & User Management | Register, login, logout, verifikasi, kelola akun |
-| Anggota 2 | Facility Management | Daftar, detail, search, filter, availability, CRUD fasilitas |
-| Anggota 3 | User Reservation | Pengajuan, validasi waktu, riwayat, detail, pembatalan |
-| Anggota 4 | Officer Reservation | Dashboard, antrian, approve, reject, conflict checking |
-| Anggota 5 | Report & Recap | Laporan, foto, maintenance, rekap, export |
+| Adam Mulya Rasyid | Authentication & User Management | Register, login, logout, verifikasi, kelola akun |
+| Arga Yura Danendra | Facility Management | Daftar, detail, search, filter, availability, CRUD fasilitas |
+| Muhammad Fahri | User Reservation | Pengajuan, validasi waktu, riwayat, detail, pembatalan |
+| Nawaal Hanif Mumtaz Arriye | Officer Reservation | Dashboard, antrian, approve, reject, conflict checking |
+| Muhammad Fahri | Report & Recap | Laporan, foto, maintenance, rekap, export |
 
 ---
 
@@ -646,11 +646,11 @@ Tambahkan identitas anggota tim pada bagian berikut:
 
 | No | Nama | NIM | Modul |
 |---:|---|---|---|
-| 1 | Nama Anggota 1 | NIM | Authentication & User |
-| 2 | Nama Anggota 2 | NIM | Facility |
-| 3 | Nama Anggota 3 | NIM | User Reservation |
-| 4 | Nama Anggota 4 | NIM | Officer Reservation |
-| 5 | Nama Anggota 5 | NIM | Report & Recap |
+| 1 | Adam Mulya Rasyid  | 24060124140179 | Authentication & User |
+| 2 | Arga Yura Danendra | 24060124140179 | Facility |
+| 3 | Muhammad Fahri | 24060124120037 | User Reservation |
+| 4 | Nawaal Hanif Mumtaz Arriye | 24060124120041 | Officer Reservation |
+| 5 | Muhammad Fahri | 24060124120037 | Report & Recap |
 
 ---
 
