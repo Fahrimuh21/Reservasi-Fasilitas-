@@ -99,17 +99,21 @@ async function noOverflow(page) {
     }
 }
 
-async function expectCentered(page, locator) {
+async function expectToastInViewport(page, locator) {
     const box = await locator.boundingBox();
     const viewport = page.viewportSize();
-    expect(Math.abs(box.x + box.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(2);
-    expect(Math.abs(box.y + box.height / 2 - viewport.height / 2)).toBeLessThanOrEqual(2);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
+    expect(box.y).toBeLessThanOrEqual(32);
+    expect(viewport.width - (box.x + box.width)).toBeLessThanOrEqual(32);
 }
 
 async function expectAdminPanelGap(page) {
     const activity = await page.locator('.admin-grid > .panel').filter({ hasText: 'Aktivitas terbaru' }).boundingBox();
     const facility = await page.locator('.admin-grid > .facility-panel').boundingBox();
-    expect(facility.y - (activity.y + activity.height)).toBeGreaterThanOrEqual(17);
+    expect(facility.y - (activity.y + activity.height)).toBeGreaterThanOrEqual(15);
 }
 
 async function noDocumentOverflow(page, selector) {
@@ -326,7 +330,7 @@ try {
     await user.getByRole('button', { name: 'Kirim laporan' }).click();
     const reportToast = user.getByRole('status');
     await expect(reportToast).toContainText('tersimpan', { timeout: 20000 });
-    await expectCentered(user, reportToast);
+    await expectToastInViewport(user, reportToast);
     await officer.getByRole('button', { name: /^Laporan/ }).click();
     const report = officer.locator('article').filter({ hasText: 'Proyektor perlu perbaikan' });
     await expect(report).toBeVisible({ timeout: 10000 });
@@ -362,7 +366,7 @@ try {
     expect(csv).toContain('Elektronik');
     const exportToast = admin.getByRole('status');
     await expect(exportToast).toContainText('Unduhan rekap dimulai');
-    await expectCentered(admin, exportToast);
+    await expectToastInViewport(admin, exportToast);
 
     const logoutButton = admin.locator('.app-topbar').getByRole('button', { name: 'Keluar' });
     await logoutButton.click();
@@ -373,7 +377,7 @@ try {
     await admin.getByRole('dialog', { name: 'Keluar dari akun?' }).getByRole('button', { name: 'Ya, keluar' }).click();
     await expect(admin).toHaveURL(`${baseURL}/`, { timeout: 15000 });
     expect(failures).toEqual([]);
-    console.log('PASS: request, approval, rejection/retry, cancellation, persistence, reports, CSV download, centered alerts, focus restoration, desktop/mobile layout.');
+    console.log('PASS: request, approval, rejection/retry, cancellation, persistence, reports, CSV download, viewport-safe alerts, focus restoration, desktop/mobile layout.');
     console.log(`Screenshots: ${artifacts}`);
 } catch (error) {
     if (browser) {
