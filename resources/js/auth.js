@@ -18,6 +18,7 @@ export function getAuthUser() {
         return JSON.parse(raw);
     } catch (error) {
         console.error('Failed to parse auth user from localStorage', error);
+        localStorage.removeItem(AUTH_USER_KEY);
         return null;
     }
 }
@@ -49,22 +50,62 @@ export function clearAuthSession() {
     delete axios.defaults.headers.common.Authorization;
 }
 
-export function restoreAuthSession() {
+/**
+ * Restore the cached token, then verify it against the server.
+ * A network failure keeps the cached session so a temporary outage does not
+ * immediately log the user out. A rejected token is always removed.
+ */
+export async function restoreAuthSession() {
     const token = getToken();
     authUser.value = getAuthUser();
-    if (token) {
-        applyAuthHeader(token);
+    if (!token) {
+        if (authUser.value) clearAuthSession();
+        return null;
+    }
+
+    applyAuthHeader(token);
+
+    try {
+        const response = await axios.get('/api/me', { timeout: 10000 });
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(response.data));
+        authUser.value = response.data;
+        return response.data;
+    } catch (error) {
+        if (error.response?.status === 401) {
+            clearAuthSession();
+            return null;
+        }
+
+        return authUser.value;
     }
 }
 
-export function hasRole(...roles){
+let interceptorId = null;
 
+/** Clear a stale local login whenever a protected API rejects its token. */
+export function installAuthInterceptor() {
+    if (interceptorId !== null) return;
+
+    interceptorId = axios.interceptors.response.use(
+        (response) => response,
+        (error) => {
+            const isLoginRequest = error.config?.url?.endsWith('/api/login');
+
+            if (error.response?.status === 401 && getToken() && !isLoginRequest) {
+                clearAuthSession();
+            }
+
+            return Promise.reject(error);
+        },
+    );
+}
+
+export function hasRole(...roles) {
     const user = getAuthUser();
 
-    if(!user){
+    if (!user) {
         return false;
     }
 
     return roles.includes(user.role);
-
 }
